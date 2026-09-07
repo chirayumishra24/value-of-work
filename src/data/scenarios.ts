@@ -15,8 +15,8 @@ export const workChains: WorkChain[] = [
 ]
 
 export const whatIfScenarios: WhatIfScenario[] = [
-  { id: 'transport-stops', stopped: 'Transport work', question: 'If transport work stops, which places could be affected next?', affected: ['market', 'community'], ripplePath: ['farm', 'market', 'community'], consequence: 'The market receives fewer supplies, and families in the community have less access to what they need.' },
-  { id: 'repair-stops', stopped: 'Repair work', question: 'If repair work stops, which places could be affected next?', affected: ['school', 'hospital'], ripplePath: ['workshop', 'school', 'hospital'], consequence: 'A broken water pipe or vehicle may stay out of use, affecting the services that need it.' },
+  { id: 'transport-stops', stopped: 'Transport work', question: 'If transport work stops, which places could be affected next?', affected: ['shop', 'community'], ripplePath: ['farm', 'shop', 'community'], consequence: 'The market receives fewer supplies, and families in the community have less access to what they need.' },
+  { id: 'repair-stops', stopped: 'Repair work', question: 'If repair work stops, which places could be affected next?', affected: ['school', 'hospital'], ripplePath: ['factory', 'school', 'hospital'], consequence: 'A broken water pipe or vehicle may stay out of use, affecting the services that need it.' },
   { id: 'cleaning-stops', stopped: 'Cleaning work', question: 'If cleaning work stops, which places could be affected next?', affected: ['school', 'community'], ripplePath: ['school', 'community'], consequence: 'Shared spaces may become less safe and comfortable for people who use them.' },
   { id: 'care-stops', stopped: 'Care work', question: 'If care work stops, which places could be affected next?', affected: ['hospital', 'community'], ripplePath: ['hospital', 'community'], consequence: 'People who need support may wait longer and their wellbeing can be affected.' },
 ]

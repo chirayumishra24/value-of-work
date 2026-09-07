@@ -73,7 +73,7 @@ function WorkChainChallenge({ activeTeamName, variantSeed, onComplete, onTravel 
   const [dragIndex, setDragIndex] = useState<number | null>(null)
   const [feedback, setFeedback] = useState('')
   const move = (from: number, to: number) => { const next = [...items]; const [moving] = next.splice(from, 1); next.splice(to, 0, moving); setItems(next) }
-  const travelNodes = chain.id === 'produce-chain' || chain.id === 'meal-chain' ? ['farm', 'market', 'community'] : chain.id === 'medicine-chain' ? ['workshop', 'hospital', 'community'] : ['workshop', 'school', 'community']
+  const travelNodes = chain.id === 'produce-chain' || chain.id === 'meal-chain' ? ['farm', 'shop', 'community'] : chain.id === 'medicine-chain' ? ['factory', 'hospital', 'community'] : ['factory', 'school', 'community']
   const check = () => {
     if (items.join('|') === chain.order.join('|')) { onTravel(chain.item, travelNodes); onComplete({ points: 15, token: 'skill', message: `${chain.explanation} Watch the item travel through the board.`, discovered: chain.order, chains: 1, recognition: 'Work Chain Builder' }) }
     else setFeedback(`Not yet. ${chain.explanation} What happens first?`)
@@ -93,7 +93,7 @@ function WhatIfChallenge({ activeTeamName, variantSeed, onComplete, onRipple }: 
   const correct = predictionMatches(scenario, selected)
   return <ChallengeFrame label="◌" title="What Happens If?" instruction={`${activeTeamName}, predict first. Then run the ripple across the community board.`}>
     <div className="scenario-banner"><span aria-hidden="true">⚠</span><div><p>CONSEQUENCE MODE</p><h3>{scenario.stopped} stops.</h3></div></div><h3 className="prompt">{scenario.question}</h3>
-    <div className="impact-choices">{['farm', 'workshop', 'market', 'school', 'hospital', 'community'].map(place => <button type="button" key={place} className={selected.includes(place) ? 'selected' : ''} onClick={() => toggle(place)}>{selected.includes(place) ? '✓ ' : ''}{place}</button>)}</div>
+    <div className="impact-choices">{['farm', 'factory', 'shop', 'school', 'hospital', 'community'].map(place => <button type="button" key={place} className={selected.includes(place) ? 'selected' : ''} onClick={() => toggle(place)}>{selected.includes(place) ? '✓ ' : ''}{place}</button>)}</div>
     {!hasRun ? <button type="button" className="primary-action" disabled={!selected.length} onClick={() => { setHasRun(true); onRipple(buildRippleSteps(scenario)) }}>Make prediction &amp; run the ripple</button> : <div className="ripple-result"><p><b>What happened:</b> {scenario.consequence}</p><p>{correct ? 'Your prediction matches the main ripple.' : 'You found part of the ripple. Look again at which places depend on this work.'}</p><button type="button" className="primary-action" onClick={() => onComplete({ points: correct ? 15 : 8, token: 'connection', message: correct ? 'Excellent prediction! One contribution can affect many others.' : 'You tested a useful prediction and saw a community connection.', predictions: 1, recognition: correct ? 'Connection Thinker' : undefined })}>Collect insight <span aria-hidden="true">→</span></button></div>}
   </ChallengeFrame>
 }

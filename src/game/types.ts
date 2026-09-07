@@ -24,4 +24,4 @@ export interface WhatIfScenario { id: string; stopped: string; question: string;
 export interface ActRole { role: string; contribution: string; options: string[] }
 export interface CrisisScenario { id: string; alerts: string[]; plan: string[]; distractors: string[]; explanation: string }
 export interface RoundDefinition { type: ChallengeType; title: string; kicker: string; time: number; icon: string; questionCategory?: QuestionCategory; takeaway: string; discussion: string }
-export interface CommunityLocation { id: string; title: string; icon: string; shortContribution: string; position: string; color: string }
+export interface CommunityLocation { id: string; title: string; icon: string; shortContribution: string; position: string; color: string; buildingImage?: string }

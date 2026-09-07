@@ -1,11 +1,11 @@
 import type { TeamState, TokenType } from '../game/types'
 
 const tokenMeta: Record<TokenType, { icon: string; label: string }> = {
-  work: { icon: '✦', label: 'Work' },
-  skill: { icon: '◆', label: 'Skill' },
-  connection: { icon: '⛓', label: 'Connection' },
-  cooperation: { icon: '♧', label: 'Cooperation' },
-  community: { icon: '♥', label: 'Community' },
+  work: { icon: '🌾', label: 'Work' },
+  skill: { icon: '⚙️', label: 'Skill' },
+  connection: { icon: '🔗', label: 'Connection' },
+  cooperation: { icon: '🤝', label: 'Cooperation' },
+  community: { icon: '💛', label: 'Community' },
 }
 
 interface TeamPanelProps {
@@ -15,24 +15,48 @@ interface TeamPanelProps {
 }
 
 export function TeamPanel({ team, active, side }: TeamPanelProps) {
+  const mascotSrc = team.id === 'A' ? '/assets/mascot_boy.jpg' : '/assets/mascot_girl.jpg'
+  const totalTokens = Object.values(team.tokens).reduce((sum, v) => sum + v, 0)
+
   return (
     <aside className={`team-panel ${side} ${active ? 'active' : ''}`} aria-label={`${team.name}: ${team.score} points`}>
-      <div className="team-topline">
-        <span className="team-avatar" aria-hidden="true">{team.id === 'A' ? '☀' : '☾'}</span>
+      <div className="team-badge-header">
+        <span className="team-icon-badge" aria-hidden="true">👥</span>
         <div>
-          <p className="eyebrow">{team.id === 'A' ? 'Team A' : 'Team B'}</p>
+          <p className="team-label">{team.id === 'A' ? 'Team A' : 'Team B'}</p>
           <h2>{team.name}</h2>
         </div>
       </div>
-      {active && <div className="turn-pill">Your turn</div>}
-      <div className="score-row"><strong>{team.score}</strong><span>points</span></div>
-      <div className="contribution-count"><span aria-hidden="true">✦</span> {team.contributions} community contributions</div>
-      <div className="token-list" aria-label="Contribution tokens">
-        {(Object.keys(tokenMeta) as TokenType[]).map((type) => (
-          <span className={`token ${type} ${team.tokens[type] ? 'earned' : ''}`} key={type} title={`${tokenMeta[type].label}: ${team.tokens[type]}`}>
-            <span aria-hidden="true">{tokenMeta[type].icon}</span><b>{team.tokens[type]}</b><span className="sr-only"> {tokenMeta[type].label} tokens</span>
-          </span>
-        ))}
+
+      <div className="team-score-badge">
+        <strong>{team.score}</strong>
+        <span>points</span>
+      </div>
+
+      {active && <div className="turn-pill">🎯 Your turn</div>}
+
+      <div className="token-collection-row" aria-label="Token collection progress">
+        <p className="token-collect-label">Collect 5 work icons to complete your community!</p>
+        <div className="token-slots">
+          {(Object.keys(tokenMeta) as TokenType[]).map((type) => (
+            <span
+              className={`token-slot ${type} ${team.tokens[type] > 0 ? 'filled' : ''}`}
+              key={type}
+              title={`${tokenMeta[type].label}: ${team.tokens[type]}`}
+            >
+              <span className="token-slot-icon">{tokenMeta[type].icon}</span>
+              {team.tokens[type] > 0 && <span className="token-slot-count">{team.tokens[type]}</span>}
+            </span>
+          ))}
+        </div>
+      </div>
+
+      <div className="team-mascot">
+        <img src={mascotSrc} alt={`${team.name} mascot`} draggable={false} />
+      </div>
+
+      <div className="team-motivational">
+        <span>{side === 'left' ? 'Answer, collect work icons and complete your community!' : 'Every kind of work makes a difference!'}</span>
       </div>
     </aside>
   )
