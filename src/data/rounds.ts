@@ -12,8 +12,8 @@ export const rounds: RoundDefinition[] = [
 ]
 
 export const sessionPresets: Record<SessionLength, { label: string; description: string; rounds: ChallengeType[] }> = {
-  quick: { label: 'Quick Play', description: 'Three high-impact challenges for a short lesson.', rounds: ['quiz', 'whatIf', 'crisis'] },
-  standard: { label: 'Standard', description: 'Five varied challenges for one class period.', rounds: ['quiz', 'connect', 'chain', 'detective', 'crisis'] },
+  quick: { label: 'Quick Play', description: 'Four high-impact challenges for a short lesson.', rounds: ['quiz', 'connect', 'whatIf', 'crisis'] },
+  standard: { label: 'Standard', description: 'Six varied challenges for one class period.', rounds: ['quiz', 'connect', 'chain', 'whatIf', 'detective', 'crisis'] },
   full: { label: 'Full Challenge', description: 'All eight challenges and the complete community story.', rounds: rounds.map(round => round.type) },
 }
 

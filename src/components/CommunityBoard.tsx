@@ -38,16 +38,17 @@ export function CommunityBoard({
       {/* Board background image */}
       <img src="/assets/board_background.jpg" alt="" className="board-bg-img" aria-hidden="true" draggable={false} />
 
-      {/* Connection paths between buildings */}
+      {/* Connection paths between buildings following the road */}
       <svg className="connection-map" viewBox="0 0 1000 460" preserveAspectRatio="none" aria-hidden="true">
-        <path className={rippleNodes.length ? 'connection pulse-route' : 'connection'} d="M150 200 C250 150, 300 180, 400 200" />
-        <path className={rippleNodes.length ? 'connection pulse-route delayed' : 'connection'} d="M400 200 C500 180, 550 150, 650 170" />
-        <path className="connection" d="M400 200 C420 260, 450 300, 500 320" />
-        <path className="connection" d="M650 170 C720 200, 750 260, 780 300" />
-        <path className="connection" d="M500 320 C600 350, 700 340, 780 300" />
-        {/* Arrows on paths */}
-        <circle cx="400" cy="200" r="8" className="connection-dot" />
-        <circle cx="650" cy="170" r="6" className="connection-dot" />
+        <path className={rippleNodes.length ? 'connection pulse-route' : 'connection'} d="M145 375 C210 340, 265 310, 315 295" />
+        <path className={rippleNodes.length ? 'connection pulse-route delayed' : 'connection'} d="M315 295 C330 250, 335 210, 350 175" />
+        <path className="connection" d="M350 175 C450 120, 520 125, 585 140" />
+        <path className="connection" d="M585 140 C640 180, 680 210, 715 250" />
+        <path className="connection" d="M715 250 C760 300, 810 340, 855 375" />
+        {/* Connection dots on road stops */}
+        <circle cx="315" cy="295" r="6" className="connection-dot" />
+        <circle cx="585" cy="140" r="6" className="connection-dot" />
+        <circle cx="715" cy="250" r="6" className="connection-dot" />
       </svg>
 
       {/* Interactive Spinner wheel in center */}

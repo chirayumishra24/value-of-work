@@ -38,7 +38,76 @@ function normalizeGame(saved: GameState): GameState {
 function TokenLegend() { return <div className="token-legend" aria-label="Token legend"><span>✦ Work</span><span>◆ Skill</span><span>⛓ Connection</span><span>♧ Cooperation</span><span>♥ Community</span></div> }
 
 function Home({ onNew, onContinue, hasSaved }: { onNew: () => void; onContinue: () => void; hasSaved: boolean }) {
-  return <main className="home-screen"><div className="home-glow glow-one" /><div className="home-glow glow-two" /><section className="intro-card"><div className="chapter-marker"><span>13</span> Grade 6 • Social Science</div><p className="eyebrow">Community challenge</p><h1>The Value <em>of Work</em></h1><p className="intro-copy">Every community depends on many kinds of work. Discover the connections, test what happens when one link stops, and restore the community together.</p><div className="intro-actions"><button type="button" className="primary-action large" onClick={onNew}>Start challenge <span aria-hidden="true">→</span></button>{hasSaved && <button type="button" className="secondary-action" onClick={onContinue}>Continue saved game</button>}</div><TokenLegend /></section><section className="intro-board" aria-label="Miniature community preview"><div className="mini-sun" aria-hidden="true">☀</div><div className="mini-cloud cloud-one" aria-hidden="true" /><div className="mini-cloud cloud-two" aria-hidden="true" /><div className="mini-location farm"><span>🌱</span><b>Farm</b></div><div className="mini-location factory"><span>🏭</span><b>Factory</b></div><div className="mini-location shop"><span>🛒</span><b>Shop</b></div><div className="mini-location school"><span>✏️</span><b>School</b></div><div className="mini-location hospital"><span>✚</span><b>Hospital</b></div><div className="mini-location community"><span>🏘</span><b>Community</b></div><svg viewBox="0 0 700 380" preserveAspectRatio="none" aria-hidden="true"><path d="M108 170 C225 100 282 175 347 190 S498 155 580 210" /><path d="M348 190 C460 290 515 286 575 280" /></svg><div className="intro-message"><span aria-hidden="true">✦</span><p>Many kinds of work<br /><b>help a community function.</b></p></div></section></main>
+  return (
+    <main className="home-screen">
+      <div className="home-glow glow-one" />
+      <div className="home-glow glow-two" />
+      <section className="intro-card">
+        <div className="chapter-marker"><span>13</span> Grade 6 • Social Science</div>
+        <p className="eyebrow">Community challenge</p>
+        <h1>The Value <em>of Work</em></h1>
+        <p className="intro-copy">
+          Every community depends on many kinds of work. Discover the connections, test what happens when one link stops, and restore the community together.
+        </p>
+        <div className="intro-actions">
+          <button type="button" className="primary-action large" onClick={onNew}>
+            Start challenge <span aria-hidden="true">→</span>
+          </button>
+          {hasSaved && (
+            <button type="button" className="secondary-action" onClick={onContinue}>
+              Continue saved game
+            </button>
+          )}
+        </div>
+        <TokenLegend />
+      </section>
+      <section className="intro-board" aria-label="Miniature community preview">
+        <img src="/assets/board_background.jpg" alt="" className="intro-board-bg" aria-hidden="true" draggable={false} />
+        <div className="intro-building farm">
+          <img src="/assets/building_farm.jpg" alt="Farm" draggable={false} />
+          <b>Farm</b>
+        </div>
+        <div className="intro-building factory">
+          <img src="/assets/building_factory.jpg" alt="Factory" draggable={false} />
+          <b>Factory</b>
+        </div>
+        <div className="intro-building shop">
+          <img src="/assets/building_shop.jpg" alt="Shop" draggable={false} />
+          <b>Shop</b>
+        </div>
+        <div className="intro-building school">
+          <img src="/assets/building_school.jpg" alt="School" draggable={false} />
+          <b>School</b>
+        </div>
+        <div className="intro-building hospital">
+          <img src="/assets/building_hospital.jpg" alt="Hospital" draggable={false} />
+          <b>Hospital</b>
+        </div>
+        <div className="intro-building community">
+          <img src="/assets/building_community.jpg" alt="Community" draggable={false} />
+          <b>Community</b>
+        </div>
+        <div className="intro-mascots" aria-hidden="true">
+          <div className="intro-mascot pawn-a" title="Team A Mascot">
+            <img src="/assets/mascot_boy.jpg" alt="Team A" draggable={false} />
+            <span className="pawn-badge">A</span>
+          </div>
+          <div className="intro-mascot pawn-b" title="Team B Mascot">
+            <img src="/assets/mascot_girl.jpg" alt="Team B" draggable={false} />
+            <span className="pawn-badge">B</span>
+          </div>
+        </div>
+        <div className="intro-spinner-preview" aria-hidden="true">
+          <img src="/assets/spinner_wheel.jpg" alt="" draggable={false} />
+          <span className="intro-spinner-btn">SPIN</span>
+        </div>
+        <div className="intro-message">
+          <span aria-hidden="true">✦</span>
+          <p>Many kinds of work<br /><b>help a community function.</b></p>
+        </div>
+      </section>
+    </main>
+  )
 }
 
 function Setup({ game, setGame, onStart }: { game: GameState; setGame: Dispatch<SetStateAction<GameState>>; onStart: () => void }) {
