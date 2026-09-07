@@ -1,5 +1,5 @@
 import { locations } from '../data/content'
-import { SpinnerWheel } from './SpinnerWheel'
+import { SpinnerWheel, type SpinModifier } from './SpinnerWheel'
 
 interface CommunityBoardProps {
   completed: number
@@ -8,9 +8,28 @@ interface CommunityBoardProps {
   rippleNodes?: string[]
   travel?: { item: string; nodes: string[]; nonce: number } | null
   reducedMotion: boolean
+  teamALocation?: string
+  teamBLocation?: string
+  activeTeam?: 'A' | 'B'
+  onSpinResult?: (modifier: SpinModifier) => void
+  onSpinTick?: () => void
+  currentModifier?: SpinModifier | null
 }
 
-export function CommunityBoard({ completed, selected, onSelect, rippleNodes = [], travel, reducedMotion }: CommunityBoardProps) {
+export function CommunityBoard({
+  completed,
+  selected,
+  onSelect,
+  rippleNodes = [],
+  travel,
+  reducedMotion,
+  teamALocation = 'farm',
+  teamBLocation = 'shop',
+  activeTeam = 'A',
+  onSpinResult,
+  onSpinTick,
+  currentModifier,
+}: CommunityBoardProps) {
   const unlocked = Math.min(locations.length, Math.max(1, completed + 1))
   const selectedLocation = locations.find((location) => location.id === selected)
 
@@ -31,9 +50,13 @@ export function CommunityBoard({ completed, selected, onSelect, rippleNodes = []
         <circle cx="650" cy="170" r="6" className="connection-dot" />
       </svg>
 
-      {/* Spinner wheel in center */}
+      {/* Interactive Spinner wheel in center */}
       <div className="board-spinner-wrapper">
-        <SpinnerWheel spinning={rippleNodes.length > 0} />
+        <SpinnerWheel
+          onSpinResult={onSpinResult}
+          onTick={onSpinTick}
+          currentModifier={currentModifier}
+        />
       </div>
 
       {/* Travelling item animation */}
@@ -43,6 +66,9 @@ export function CommunityBoard({ completed, selected, onSelect, rippleNodes = []
       {locations.map((location, index) => {
         const isUnlocked = index < unlocked
         const rippling = rippleNodes.includes(location.id)
+        const hasPawnA = teamALocation === location.id
+        const hasPawnB = teamBLocation === location.id
+
         return (
           <button
             type="button"
@@ -60,6 +86,28 @@ export function CommunityBoard({ completed, selected, onSelect, rippleNodes = []
             </div>
             <span className="node-label">{location.title}</span>
             {!isUnlocked && <span className="lock-mark" aria-label="Locked">🔒</span>}
+
+            {/* Mascot Pawns on Building Nodes */}
+            <div className="node-pawns-container">
+              {hasPawnA && (
+                <div
+                  className={`board-pawn team-a-pawn ${activeTeam === 'A' ? 'active-pawn' : ''} ${rippling ? 'pawn-hopping' : ''}`}
+                  title="Team A Mascot"
+                >
+                  <img src="/assets/mascot_boy.jpg" alt="Team A" draggable={false} />
+                  <span className="pawn-badge">A</span>
+                </div>
+              )}
+              {hasPawnB && (
+                <div
+                  className={`board-pawn team-b-pawn ${activeTeam === 'B' ? 'active-pawn' : ''} ${rippling ? 'pawn-hopping' : ''}`}
+                  title="Team B Mascot"
+                >
+                  <img src="/assets/mascot_girl.jpg" alt="Team B" draggable={false} />
+                  <span className="pawn-badge">B</span>
+                </div>
+              )}
+            </div>
           </button>
         )
       })}

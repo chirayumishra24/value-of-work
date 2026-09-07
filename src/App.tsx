@@ -2,8 +2,11 @@ import { useEffect, useMemo, useState, type Dispatch, type SetStateAction } from
 import { ChallengePanel, type ChallengeReward } from './components/ChallengePanel'
 import { ChallengeToolbar } from './components/ChallengeToolbar'
 import { CommunityBoard } from './components/CommunityBoard'
+import { LearningGuideModal } from './components/LearningGuideModal'
 import { Sidebar } from './components/Sidebar'
+import { type SpinModifier } from './components/SpinnerWheel'
 import { TeamPanel } from './components/TeamPanel'
+import { TimerRing } from './components/TimerRing'
 import { getRound, questions, sessionPresets } from './data/content'
 import { getStrings } from './data/strings'
 import { readStored, removeStored, writeStored } from './hooks/useLocalStorage'
@@ -11,12 +14,13 @@ import { useSound } from './hooks/useSound'
 import { useTimer } from './hooks/useTimer'
 import { selectUnusedQuestion } from './game/questionManager'
 import type { ChallengeType, GameMode, GameSettings, GameState, SessionLength, TeamId, TeamState, TokenType } from './game/types'
+import { launchConfetti } from './utils/confetti'
 
 const SETTINGS_KEY = 'value-of-work-settings'
 const GAME_KEY = 'value-of-work-game'
 const REPORT_KEY = 'value-of-work-last-report'
 const REFLECTION_KEY = 'value-of-work-reflection'
-const defaultSettings: GameSettings = { timerEnabled: true, soundEnabled: false, reducedMotion: false, readingMode: 'standard', language: 'en' }
+const defaultSettings: GameSettings = { timerEnabled: true, soundEnabled: true, reducedMotion: false, readingMode: 'standard', language: 'en' }
 
 function makeTeam(id: TeamId, name: string): TeamState { return { id, name, score: 0, contributions: 0, tokens: { work: 0, skill: 0, connection: 0, cooperation: 0, community: 0 } } }
 function toggleTeam(team: TeamId): TeamId { return team === 'A' ? 'B' : 'A' }
@@ -55,17 +59,77 @@ function RewardCard({ reward, round, lastRound, onNext }: { reward: ChallengeRew
 }
 
 function GameView({ game, setGame, onResults }: { game: GameState; setGame: Dispatch<SetStateAction<GameState>>; onResults: () => void }) {
-  const [roundComplete, setRoundComplete] = useState(false); const [lastReward, setLastReward] = useState<ChallengeReward | null>(null); const [selectedLocation, setSelectedLocation] = useState<string | null>(null); const [rippleNodes, setRippleNodes] = useState<string[]>([]); const [travel, setTravel] = useState<{ item: string; nodes: string[]; nonce: number } | null>(null); const [timerPaused, setTimerPaused] = useState(false); const [challengeVersion, setChallengeVersion] = useState(0)
-  const sessionRounds = game.activeRounds.map(getRound); const round = sessionRounds[game.currentRound]; const activeTeam = game.teams[game.activeTeam]; const otherTeam = game.teams[toggleTeam(game.activeTeam)]; const playSound = useSound(game.settings.soundEnabled)
+  const [roundComplete, setRoundComplete] = useState(false)
+  const [lastReward, setLastReward] = useState<ChallengeReward | null>(null)
+  const [selectedLocation, setSelectedLocation] = useState<string | null>(null)
+  const [rippleNodes, setRippleNodes] = useState<string[]>([]); const [travel, setTravel] = useState<{ item: string; nodes: string[]; nonce: number } | null>(null)
+  const [timerPaused, setTimerPaused] = useState(false); const [challengeVersion, setChallengeVersion] = useState(0)
+  const [currentModifier, setCurrentModifier] = useState<SpinModifier | null>(null)
+  const [guideOpen, setGuideOpen] = useState(false)
+  const [guideTab, setGuideTab] = useState<'concepts' | 'careers' | 'tokens'>('concepts')
+
+  const sessionRounds = game.activeRounds.map(getRound)
+  const round = sessionRounds[game.currentRound]
+  const activeTeam = game.teams[game.activeTeam]
+  const otherTeam = game.teams[toggleTeam(game.activeTeam)]
+  const playSound = useSound(game.settings.soundEnabled)
+
+  const locationKeys = ['farm', 'factory', 'shop', 'school', 'hospital', 'community']
+  const teamALocation = locationKeys[game.teams.A.contributions % locationKeys.length]
+  const teamBLocation = locationKeys[game.teams.B.contributions % locationKeys.length]
+
   const question = useMemo(() => selectUnusedQuestion(questions, game.usedQuestionIds, round.questionCategory, game.sessionSeed + game.currentRound + challengeVersion) || questions[0], [game.usedQuestionIds, game.currentRound, game.sessionSeed, round.questionCategory, challengeVersion])
   const seconds = useTimer(round.time, game.settings.timerEnabled && !timerPaused && !roundComplete, `${game.currentRound}-${challengeVersion}`)
-  useEffect(() => { setRoundComplete(false); setLastReward(null); setRippleNodes([]); setTravel(null); setTimerPaused(false) }, [game.currentRound, round.time])
+
+  useEffect(() => { setRoundComplete(false); setLastReward(null); setRippleNodes([]); setTravel(null); setTimerPaused(false); setCurrentModifier(null) }, [game.currentRound, round.time])
   useEffect(() => { if (seconds === 5 && game.settings.timerEnabled && !timerPaused) playSound('warning') }, [seconds, game.settings.timerEnabled, playSound, timerPaused])
-  const complete = (reward: ChallengeReward) => { const recipient = reward.teamId || game.activeTeam; setGame(current => { const team = current.teams[recipient]; const tokens = { ...team.tokens, [reward.token]: team.tokens[reward.token] + 1 }; return { ...current, teams: { ...current.teams, [recipient]: { ...team, score: team.score + reward.points, contributions: team.contributions + 1, tokens } }, usedQuestionIds: round.type === 'quiz' ? [...new Set([...current.usedQuestionIds, question.id])] : current.usedQuestionIds, completedChallenges: [...current.completedChallenges, round.type], challengeHistory: [...current.challengeHistory, round.type], discoveredWork: [...new Set([...current.discoveredWork, ...(reward.discovered || [])])], completedChains: current.completedChains + (reward.chains || 0), predictions: current.predictions + (reward.predictions || 0), problemsSolved: current.problemsSolved + (reward.problems || 0), hiddenWorkDiscovered: current.hiddenWorkDiscovered + (reward.hiddenWork || 0), recognitions: reward.recognition ? [...new Set([...current.recognitions, reward.recognition])] : current.recognitions } }); setLastReward(reward); setRoundComplete(true); playSound(round.type === 'crisis' ? 'restore' : 'reward') }
+
+  const complete = (reward: ChallengeReward) => {
+    const recipient = reward.teamId || game.activeTeam
+    let points = reward.points
+    let extraToken = 0
+    if (currentModifier?.effect === 'double') points *= 2
+    if (currentModifier?.effect === 'bonusPoints') points += 5
+    if (currentModifier?.effect === 'token') extraToken = 1
+
+    setGame(current => {
+      const team = current.teams[recipient]
+      const other = current.teams[toggleTeam(recipient)]
+      const tokens = { ...team.tokens, [reward.token]: team.tokens[reward.token] + 1 + extraToken }
+      const updatedTeams = {
+        ...current.teams,
+        [recipient]: { ...team, score: team.score + points, contributions: team.contributions + 1, tokens },
+      }
+      if (currentModifier?.effect === 'teamwork') {
+        updatedTeams[other.id] = { ...other, score: other.score + 3 }
+      }
+      return {
+        ...current,
+        teams: updatedTeams,
+        usedQuestionIds: round.type === 'quiz' ? [...new Set([...current.usedQuestionIds, question.id])] : current.usedQuestionIds,
+        completedChallenges: [...current.completedChallenges, round.type],
+        challengeHistory: [...current.challengeHistory, round.type],
+        discoveredWork: [...new Set([...current.discoveredWork, ...(reward.discovered || [])])],
+        completedChains: current.completedChains + (reward.chains || 0),
+        predictions: current.predictions + (reward.predictions || 0),
+        problemsSolved: current.problemsSolved + (reward.problems || 0),
+        hiddenWorkDiscovered: current.hiddenWorkDiscovered + (reward.hiddenWork || 0),
+        recognitions: reward.recognition ? [...new Set([...current.recognitions, reward.recognition])] : current.recognitions,
+      }
+    })
+    setLastReward({ ...reward, points })
+    setRoundComplete(true)
+    launchConfetti(70)
+    playSound('whoop')
+    window.setTimeout(() => {
+      playSound(round.type === 'crisis' ? 'restore' : 'reward')
+    }, 180)
+  }
+
   const nextRound = () => { if (game.currentRound === sessionRounds.length - 1) { onResults(); return } setGame(current => ({ ...current, activeTeam: toggleTeam(current.activeTeam), currentRound: current.currentRound + 1 })) }
   const updateSetting = (key: keyof GameSettings, value?: string | boolean) => setGame(current => ({ ...current, settings: { ...current.settings, [key]: value ?? !current.settings[key] } }))
   const reset = () => setGame(current => ({ ...newGame(current.settings, current.mode, current.sessionLength, [current.teams.A.name, current.teams.B.name]), screen: 'setup' }))
-  const restart = () => { setRoundComplete(false); setLastReward(null); setRippleNodes([]); setTravel(null); setTimerPaused(false); setChallengeVersion(current => current + 1) }
+  const restart = () => { setRoundComplete(false); setLastReward(null); setRippleNodes([]); setTravel(null); setTimerPaused(false); setChallengeVersion(current => current + 1); setCurrentModifier(null) }
   const chooseRound = (roundIndex: number) => roundIndex === game.currentRound ? restart() : setGame(current => ({ ...current, currentRound: roundIndex, activeTeam: roundIndex % 2 === 0 ? 'A' : 'B' }))
   const fullscreen = () => { if (document.fullscreenElement) void document.exitFullscreen(); else void document.documentElement.requestFullscreen?.() }
   const rename = (team: TeamId, name: string) => setGame(current => ({ ...current, teams: { ...current.teams, [team]: { ...current.teams[team], name } } }))
@@ -73,14 +137,26 @@ function GameView({ game, setGame, onResults }: { game: GameState; setGame: Disp
   const startRipple = (nodes: string[]) => { setRippleNodes(nodes); playSound('select') }
   const handleGoHome = () => setGame(current => ({ ...newGame(current.settings, current.mode, current.sessionLength, [current.teams.A.name, current.teams.B.name]), screen: 'home' }))
   const handleToggleSettings = () => { const el = document.querySelector('.teacher-controls') as HTMLDetailsElement | null; if (el) el.open = !el.open }
-  return <main className={`game-screen ${game.settings.reducedMotion ? 'reduce-motion' : ''} ${game.settings.readingMode === 'focus' ? 'focus-reading' : ''}`}><a className="skip-link" href="#challenge">Skip to current challenge</a><header className="game-header"><div className="brand-banner"><div className="brand-title"><h1><span className="title-the">The</span> <span className="title-value">Value</span> <span className="title-of">of</span> <span className="title-work">Work</span></h1><p className="brand-subtitle">Different Work. Brighter Lives.</p></div></div><ChallengeToolbar activeType={round.type} roundTypes={game.activeRounds} /><div className="game-tools"><div className={`timer ${seconds <= 5 && game.settings.timerEnabled ? 'warning' : ''}`}><span className="timer-icon">⏱</span><b>{game.settings.timerEnabled ? `${seconds}s` : 'Timer off'}</b></div><TeacherControls settings={game.settings} teams={game.teams} rounds={sessionRounds} currentRound={game.currentRound} timerPaused={timerPaused} onSettings={updateSetting} onReset={reset} onRestart={restart} onSkip={nextRound} onChooseRound={chooseRound} onPause={() => setTimerPaused(current => !current)} onFullscreen={fullscreen} onRename={rename} /></div></header><div className="game-body"><Sidebar onHome={handleGoHome} onSettings={handleToggleSettings} /><div className="game-main-area"><TeamPanel team={game.teams.A} active={game.activeTeam === 'A'} side="left" /><section className="center-stage"><div className="turn-banner"><div className="turn-banner-inner"><span className="turn-team-name">🎯 {activeTeam.name}'s Turn!</span><p className="turn-kicker">{round.kicker}</p></div><div className="round-info"><span className="round-badge">{round.icon} {round.title}</span><span className="round-counter">Round {game.currentRound + 1} / {sessionRounds.length}</span></div></div><CommunityBoard completed={game.completedChallenges.length} selected={selectedLocation} onSelect={setSelectedLocation} rippleNodes={rippleNodes} travel={travel} reducedMotion={game.settings.reducedMotion} /><div id="challenge" className="challenge-slot">{roundComplete && lastReward ? <RewardCard reward={lastReward} round={round} lastRound={game.currentRound === sessionRounds.length - 1} onNext={nextRound} /> : <ChallengePanel key={`${round.type}-${game.currentRound}-${challengeVersion}`} type={round.type} activeTeamName={activeTeam.name} stealTeamName={otherTeam.name} stealTeamId={otherTeam.id} question={question} variantSeed={game.sessionSeed + game.currentRound * 11 + challengeVersion} onComplete={complete} onRipple={startRipple} onTravel={startTravel} />}</div></section><TeamPanel team={game.teams.B} active={game.activeTeam === 'B'} side="right" /></div><div className="motivational-sign"><span>📋</span><p><b>WORK BUILDS<br/>BRIGHTER TOMORROWS</b></p></div></div></main>
+  const handleOpenGuide = (tab?: 'concepts' | 'careers' | 'tokens') => { setGuideTab(tab || 'concepts'); setGuideOpen(true) }
+
+  return <main className={`game-screen ${game.settings.reducedMotion ? 'reduce-motion' : ''} ${game.settings.readingMode === 'focus' ? 'focus-reading' : ''}`}><a className="skip-link" href="#challenge">Skip to current challenge</a><header className="game-header"><div className="brand-banner"><div className="brand-title"><h1><span className="title-the">The</span> <span className="title-value">Value</span> <span className="title-of">of</span> <span className="title-work">Work</span></h1><p className="brand-subtitle">Different Work. Brighter Lives.</p></div></div><ChallengeToolbar activeType={round.type} roundTypes={game.activeRounds} /><div className="game-tools"><button type="button" className="sound-toggle-btn" onClick={() => updateSetting('soundEnabled')} aria-label={game.settings.soundEnabled ? 'Mute sound' : 'Enable sound'}><span>{game.settings.soundEnabled ? '🔊' : '🔇'}</span></button><TimerRing seconds={seconds} totalSeconds={round.time} enabled={game.settings.timerEnabled} paused={timerPaused} /><TeacherControls settings={game.settings} teams={game.teams} rounds={sessionRounds} currentRound={game.currentRound} timerPaused={timerPaused} onSettings={updateSetting} onReset={reset} onRestart={restart} onSkip={nextRound} onChooseRound={chooseRound} onPause={() => setTimerPaused(current => !current)} onFullscreen={fullscreen} onRename={rename} /></div></header><div className="game-body"><Sidebar onHome={handleGoHome} onSettings={handleToggleSettings} onOpenGuide={handleOpenGuide} /><div className="game-main-area"><TeamPanel team={game.teams.A} active={game.activeTeam === 'A'} side="left" /><section className="center-stage"><div className="turn-banner"><div className="turn-banner-inner"><span className="turn-team-name">🎯 {activeTeam.name}'s Turn!</span><p className="turn-kicker">{round.kicker}</p></div><div className="round-info"><span className="round-badge">{round.icon} {round.title}</span><span className="round-counter">Round {game.currentRound + 1} / {sessionRounds.length}</span></div></div><CommunityBoard completed={game.completedChallenges.length} selected={selectedLocation} onSelect={setSelectedLocation} rippleNodes={rippleNodes} travel={travel} reducedMotion={game.settings.reducedMotion} teamALocation={teamALocation} teamBLocation={teamBLocation} activeTeam={game.activeTeam} currentModifier={currentModifier} onSpinResult={mod => { setCurrentModifier(mod); playSound('coin'); launchConfetti(35) }} onSpinTick={() => playSound('spinTick')} /><div id="challenge" className="challenge-slot">{roundComplete && lastReward ? <RewardCard reward={lastReward} round={round} lastRound={game.currentRound === sessionRounds.length - 1} onNext={nextRound} /> : <ChallengePanel key={`${round.type}-${game.currentRound}-${challengeVersion}`} type={round.type} activeTeamName={activeTeam.name} stealTeamName={otherTeam.name} stealTeamId={otherTeam.id} question={question} variantSeed={game.sessionSeed + game.currentRound * 11 + challengeVersion} onComplete={complete} onRipple={startRipple} onTravel={startTravel} />}</div></section><TeamPanel team={game.teams.B} active={game.activeTeam === 'B'} side="right" /></div><div className="motivational-sign"><span>📋</span><p><b>WORK BUILDS<br/>BRIGHTER TOMORROWS</b></p></div></div><LearningGuideModal isOpen={guideOpen} initialTab={guideTab} onClose={() => setGuideOpen(false)} /></main>
 }
 
 function Results({ game, onNew }: { game: GameState; onNew: () => void }) {
   const [reflection, setReflection] = useState<string[]>(() => readStored<string[]>(REFLECTION_KEY) || [])
   const winner = game.teams.A.score === game.teams.B.score ? 'Both teams' : game.teams.A.score > game.teams.B.score ? game.teams.A.name : game.teams.B.name
   const facts = ['Work can support another person’s work.', 'Some important contributions are less visible.', 'A stopped contribution can affect a whole community.', 'Skills and cooperation help communities function.']
-  useEffect(() => { writeStored(REFLECTION_KEY, reflection); writeStored(REPORT_KEY, { completedAt: new Date().toISOString(), game, reflection }) }, [game, reflection])
+  const playSound = useSound(game.settings.soundEnabled)
+
+  useEffect(() => {
+    writeStored(REFLECTION_KEY, reflection)
+    writeStored(REPORT_KEY, { completedAt: new Date().toISOString(), game, reflection })
+    launchConfetti(120, 0.5, 0.25)
+    playSound('fanfare')
+    const t = setTimeout(() => launchConfetti(80, 0.5, 0.4), 700)
+    return () => clearTimeout(t)
+  }, [game, reflection, playSound])
+
   return <main className="results-screen"><section className="results-hero"><div className="confetti" aria-hidden="true">✦ ◆ ♥ ⛓ ✦</div><p className="eyebrow">Community contribution report</p><h1>You connected the <em>community.</em></h1><p>Different kinds of work help people, families and communities function.</p><div className="winner-callout"><span aria-hidden="true">🏆</span><div><small>Today’s community builders</small><b>{winner}</b></div></div></section><section className="report-grid"><article className="score-report"><h2>Total score</h2><div><span>{game.teams.A.name}</span><b>{game.teams.A.score}</b></div><div><span>{game.teams.B.name}</span><b>{game.teams.B.score}</b></div><TokenLegend /></article><article className="discovery-report"><h2>You discovered</h2><div className="stat-grid"><p><b>{game.discoveredWork.length}</b><span>types of work</span></p><p><b>{game.completedChallenges.length}</b><span>community connections</span></p><p><b>{game.completedChains}</b><span>work chains</span></p><p><b>{game.predictions}</b><span>predictions made</span></p><p><b>{game.problemsSolved}</b><span>problems solved</span></p><p><b>{game.hiddenWorkDiscovered}</b><span>hidden work noticed</span></p></div></article></section><section className="evidence-report"><h2>Learning evidence</h2><div>{game.discoveredWork.map(item => <span key={item}>{item}</span>)}</div>{game.recognitions.length > 0 && <><h3>Recognitions earned</h3><div>{game.recognitions.map(item => <span className="recognition-chip" key={item}>★ {item}</span>)}</div></>}</section><section className="reflection-card"><p className="eyebrow">Reflect together</p><h2>What will you carry forward?</h2><p>Select the ideas your team can now explain with an example.</p><div className="reflection-choices">{facts.map(fact => <button type="button" className={reflection.includes(fact) ? 'selected' : ''} onClick={() => setReflection(current => current.includes(fact) ? current.filter(item => item !== fact) : [...current, fact])} key={fact}>{reflection.includes(fact) ? '✓ ' : ''}{fact}</button>)}</div><p className="final-message">Every contribution can make a difference.</p><div className="results-actions"><button type="button" className="secondary-action" onClick={() => window.print()}>Print report</button><button type="button" className="primary-action large" onClick={onNew}>Play a new challenge <span aria-hidden="true">↻</span></button></div></section></main>
 }
 
