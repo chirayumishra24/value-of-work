@@ -11,6 +11,8 @@ interface CommunityBoardProps {
   teamALocation?: string
   teamBLocation?: string
   activeTeam?: 'A' | 'B'
+  teamAAvatar?: string
+  teamBAvatar?: string
   onSpinResult?: (modifier: SpinModifier) => void
   onSpinTick?: () => void
   currentModifier?: SpinModifier | null
@@ -26,6 +28,8 @@ export function CommunityBoard({
   teamALocation = 'farm',
   teamBLocation = 'shop',
   activeTeam = 'A',
+  teamAAvatar,
+  teamBAvatar,
   onSpinResult,
   onSpinTick,
   currentModifier,
@@ -95,7 +99,7 @@ export function CommunityBoard({
                   className={`board-pawn team-a-pawn ${activeTeam === 'A' ? 'active-pawn' : ''} ${rippling ? 'pawn-hopping' : ''}`}
                   title="Team A Mascot"
                 >
-                  <img src="/assets/mascot_boy.jpg" alt="Team A" draggable={false} />
+                  <img src={teamAAvatar || '/assets/team_group_a.jpg'} alt="Team A" draggable={false} />
                   <span className="pawn-badge">A</span>
                 </div>
               )}
@@ -104,7 +108,7 @@ export function CommunityBoard({
                   className={`board-pawn team-b-pawn ${activeTeam === 'B' ? 'active-pawn' : ''} ${rippling ? 'pawn-hopping' : ''}`}
                   title="Team B Mascot"
                 >
-                  <img src="/assets/mascot_girl.jpg" alt="Team B" draggable={false} />
+                  <img src={teamBAvatar || '/assets/team_group_b.jpg'} alt="Team B" draggable={false} />
                   <span className="pawn-badge">B</span>
                 </div>
               )}

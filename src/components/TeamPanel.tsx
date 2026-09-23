@@ -15,7 +15,7 @@ interface TeamPanelProps {
 }
 
 export function TeamPanel({ team, active, side }: TeamPanelProps) {
-  const mascotSrc = team.id === 'A' ? '/assets/mascot_boy.jpg' : '/assets/mascot_girl.jpg'
+  const mascotSrc = team.avatar || (team.id === 'A' ? '/assets/team_group_a.jpg' : '/assets/team_group_b.jpg')
   const totalTokens = Object.values(team.tokens).reduce((sum, v) => sum + v, 0)
 
   return (

@@ -9,7 +9,7 @@ export type UiLanguage = 'en' | 'hi'
 export type QuestionCategory = 'contribution' | 'skills' | 'connections' | 'care' | 'maintenance' | 'cooperation'
 export type LifelineType = 'fiftyFifty' | 'clue' | 'extraTime'
 
-export interface TeamState { id: TeamId; name: string; score: number; tokens: Record<TokenType, number>; contributions: number }
+export interface TeamState { id: TeamId; name: string; score: number; tokens: Record<TokenType, number>; contributions: number; avatar?: string }
 export interface GameSettings { timerEnabled: boolean; soundEnabled: boolean; reducedMotion: boolean; readingMode: ReadingMode; language: UiLanguage }
 export interface GameState {
   screen: GameScreen; mode: GameMode; sessionLength: SessionLength; activeRounds: ChallengeType[]; sessionSeed: number

@@ -22,17 +22,54 @@ const REPORT_KEY = 'value-of-work-last-report'
 const REFLECTION_KEY = 'value-of-work-reflection'
 const defaultSettings: GameSettings = { timerEnabled: true, soundEnabled: true, reducedMotion: false, readingMode: 'standard', language: 'en' }
 
-function makeTeam(id: TeamId, name: string): TeamState { return { id, name, score: 0, contributions: 0, tokens: { work: 0, skill: 0, connection: 0, cooperation: 0, community: 0 } } }
+export const AVATAR_OPTIONS = [
+  { id: 'boy_1', label: 'Boy 1', src: '/assets/avatar_boy_1.jpg', gender: '👦 Boy' },
+  { id: 'boy_2', label: 'Boy 2', src: '/assets/avatar_boy_2.jpg', gender: '👦 Boy' },
+  { id: 'boy_3', label: 'Boy 3', src: '/assets/avatar_boy_3.jpg', gender: '👦 Boy' },
+  { id: 'girl_1', label: 'Girl 1', src: '/assets/avatar_girl_1.jpg', gender: '👧 Girl' },
+  { id: 'girl_2', label: 'Girl 2', src: '/assets/avatar_girl_2.jpg', gender: '👧 Girl' },
+  { id: 'girl_3', label: 'Girl 3', src: '/assets/avatar_girl_3.jpg', gender: '👧 Girl' },
+]
+
+function makeTeam(id: TeamId, name: string, avatar?: string): TeamState {
+  const defaultAvatar = id === 'A' ? '/assets/team_group_a.jpg' : '/assets/team_group_b.jpg'
+  return { id, name, score: 0, contributions: 0, tokens: { work: 0, skill: 0, connection: 0, cooperation: 0, community: 0 }, avatar: avatar || defaultAvatar }
+}
 function toggleTeam(team: TeamId): TeamId { return team === 'A' ? 'B' : 'A' }
 
-function newGame(settings: GameSettings, mode: GameMode = 'teams', sessionLength: SessionLength = 'full', names?: [string, string]): GameState {
+function newGame(settings: GameSettings, mode: GameMode = 'teams', sessionLength: SessionLength = 'full', names?: [string, string], avatars?: [string, string]): GameState {
   const defaults = mode === 'teams' ? ['The Contributors', 'The Community Builders'] : ['Player A', 'Player B']
-  return { screen: 'home', mode, sessionLength, activeRounds: sessionPresets[sessionLength].rounds, sessionSeed: Date.now() % 10000, teams: { A: makeTeam('A', names?.[0] || defaults[0]), B: makeTeam('B', names?.[1] || defaults[1]) }, activeTeam: 'A', currentRound: 0, usedQuestionIds: [], completedChallenges: [], discoveredWork: [], completedChains: 0, predictions: 0, problemsSolved: 0, hiddenWorkDiscovered: 0, recognitions: [], challengeHistory: [], settings }
+  const defaultAvatars: [string, string] = mode === 'teams'
+    ? ['/assets/team_group_a.jpg', '/assets/team_group_b.jpg']
+    : ['/assets/avatar_boy_1.jpg', '/assets/avatar_girl_1.jpg']
+  return {
+    screen: 'home',
+    mode,
+    sessionLength,
+    activeRounds: sessionPresets[sessionLength].rounds,
+    sessionSeed: Date.now() % 10000,
+    teams: {
+      A: makeTeam('A', names?.[0] || defaults[0], avatars?.[0] || defaultAvatars[0]),
+      B: makeTeam('B', names?.[1] || defaults[1], avatars?.[1] || defaultAvatars[1]),
+    },
+    activeTeam: 'A',
+    currentRound: 0,
+    usedQuestionIds: [],
+    completedChallenges: [],
+    discoveredWork: [],
+    completedChains: 0,
+    predictions: 0,
+    problemsSolved: 0,
+    hiddenWorkDiscovered: 0,
+    recognitions: [],
+    challengeHistory: [],
+    settings,
+  }
 }
 
 function normalizeGame(saved: GameState): GameState {
   const sessionLength = saved.sessionLength || 'full'
-  return { ...newGame({ ...defaultSettings, ...saved.settings }, saved.mode || 'teams', sessionLength, [saved.teams?.A?.name || 'The Contributors', saved.teams?.B?.name || 'The Community Builders']), ...saved, sessionLength, activeRounds: saved.activeRounds?.length ? saved.activeRounds : sessionPresets[sessionLength].rounds, recognitions: saved.recognitions || [], challengeHistory: saved.challengeHistory || [] }
+  return { ...newGame({ ...defaultSettings, ...saved.settings }, saved.mode || 'teams', sessionLength, [saved.teams?.A?.name || 'The Contributors', saved.teams?.B?.name || 'The Community Builders'], [saved.teams?.A?.avatar || '', saved.teams?.B?.avatar || '']), ...saved, sessionLength, activeRounds: saved.activeRounds?.length ? saved.activeRounds : sessionPresets[sessionLength].rounds, recognitions: saved.recognitions || [], challengeHistory: saved.challengeHistory || [] }
 }
 
 function TokenLegend() { return <div className="token-legend" aria-label="Token legend"><span>✦ Work</span><span>◆ Skill</span><span>⛓ Connection</span><span>♧ Cooperation</span><span>♥ Community</span></div> }
@@ -119,19 +156,120 @@ function Setup({ game, setGame, onStart }: { game: GameState; setGame: Dispatch<
       const oldDefaults = mode === 'teams' ? playerDefaults : teamDefaults
       const nameA = current.teams.A.name === oldDefaults[0] ? newDefaults[0] : current.teams.A.name
       const nameB = current.teams.B.name === oldDefaults[1] ? newDefaults[1] : current.teams.B.name
+      const avatarA = mode === 'teams' ? '/assets/team_group_a.jpg' : (current.teams.A.avatar?.includes('avatar_') ? current.teams.A.avatar : '/assets/avatar_boy_1.jpg')
+      const avatarB = mode === 'teams' ? '/assets/team_group_b.jpg' : (current.teams.B.avatar?.includes('avatar_') ? current.teams.B.avatar : '/assets/avatar_girl_1.jpg')
       return {
         ...current,
         mode,
         teams: {
-          A: { ...current.teams.A, name: nameA },
-          B: { ...current.teams.B, name: nameB },
+          A: { ...current.teams.A, name: nameA, avatar: avatarA },
+          B: { ...current.teams.B, name: nameB, avatar: avatarB },
         },
       }
     })
   }
   const setSession = (sessionLength: SessionLength) => setGame(current => ({ ...current, sessionLength, activeRounds: sessionPresets[sessionLength].rounds }))
   const updateName = (team: TeamId, name: string) => setGame(current => ({ ...current, teams: { ...current.teams, [team]: { ...current.teams[team], name } } }))
-  return <main className="setup-screen"><section className="setup-card"><div className="chapter-marker"><span>13</span> Community Challenge</div><p className="eyebrow">Choose your play mode</p><h1>Build a better community <em>together.</em></h1><div className="mode-switch" role="group" aria-label="Game mode"><button type="button" className={game.mode === 'teams' ? 'selected' : ''} onClick={() => setMode('teams')}><span>♟</span><b>Two team mode</b><small>Perfect for a classroom</small></button><button type="button" className={game.mode === 'players' ? 'selected' : ''} onClick={() => setMode('players')}><span>⚉</span><b>Two player mode</b><small>Play head-to-head</small></button></div><div className="session-picker" role="group" aria-label="Session length">{(Object.keys(sessionPresets) as SessionLength[]).map(length => <button type="button" key={length} className={game.sessionLength === length ? 'selected' : ''} onClick={() => setSession(length)}><b>{sessionPresets[length].label}</b><small>{sessionPresets[length].description}</small><span>{sessionPresets[length].rounds.length} rounds</span></button>)}</div><div className="name-fields"><label><span>{game.mode === 'teams' ? 'Team A name' : 'Player A name'}</span><input value={game.teams.A.name} maxLength={28} onChange={event => updateName('A', event.target.value)} /></label><span className="versus">VS</span><label><span>{game.mode === 'teams' ? 'Team B name' : 'Player B name'}</span><input value={game.teams.B.name} maxLength={28} onChange={event => updateName('B', event.target.value)} /></label></div><p className="setup-note">{sessionPresets[game.sessionLength].description} Take turns, build connections, and collect contribution tokens.</p><button type="button" className="primary-action large" onClick={onStart}>Ready — start game ({game.mode === 'teams' ? 'Two Teams' : 'Two Players'}) <span aria-hidden="true">→</span></button></section></main>
+  const updateAvatar = (team: TeamId, avatar: string) => setGame(current => ({ ...current, teams: { ...current.teams, [team]: { ...current.teams[team], avatar } } }))
+
+  return (
+    <main className="setup-screen">
+      <section className="setup-card">
+        <div className="chapter-marker"><span>13</span> Community Challenge</div>
+        <p className="eyebrow">Choose your play mode</p>
+        <h1>Build a better community <em>together.</em></h1>
+        <div className="mode-switch" role="group" aria-label="Game mode">
+          <button type="button" className={game.mode === 'teams' ? 'selected' : ''} onClick={() => setMode('teams')}>
+            <span>♟</span><b>Two team mode</b><small>Perfect for a classroom</small>
+          </button>
+          <button type="button" className={game.mode === 'players' ? 'selected' : ''} onClick={() => setMode('players')}>
+            <span>⚉</span><b>Two player mode</b><small>Play head-to-head</small>
+          </button>
+        </div>
+
+        {game.mode === 'teams' ? (
+          <div className="team-preview-strip" aria-label="Team Mascots Preview">
+            <div className="team-preview-card">
+              <img src="/assets/team_group_a.jpg" alt="Team A Group" className="team-preview-img" />
+              <div>
+                <b>Team A Mascot</b>
+                <span>{game.teams.A.name || 'The Contributors'}</span>
+              </div>
+            </div>
+            <div className="team-preview-card">
+              <img src="/assets/team_group_b.jpg" alt="Team B Group" className="team-preview-img" />
+              <div>
+                <b>Team B Mascot</b>
+                <span>{game.teams.B.name || 'The Community Builders'}</span>
+              </div>
+            </div>
+          </div>
+        ) : (
+          <div className="avatar-pickers-container" aria-label="Individual Player Avatars">
+            <div className="avatar-picker-column">
+              <span className="picker-title">Choose {game.teams.A.name || 'Player A'} Avatar:</span>
+              <div className="avatar-select-grid">
+                {AVATAR_OPTIONS.map(opt => (
+                  <button
+                    type="button"
+                    key={`A-${opt.id}`}
+                    className={`avatar-thumbnail-btn ${game.teams.A.avatar === opt.src ? 'selected' : ''}`}
+                    onClick={() => updateAvatar('A', opt.src)}
+                    title={opt.label}
+                  >
+                    <img src={opt.src} alt={opt.label} />
+                    <span>{opt.label}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div className="avatar-picker-column">
+              <span className="picker-title">Choose {game.teams.B.name || 'Player B'} Avatar:</span>
+              <div className="avatar-select-grid">
+                {AVATAR_OPTIONS.map(opt => (
+                  <button
+                    type="button"
+                    key={`B-${opt.id}`}
+                    className={`avatar-thumbnail-btn ${game.teams.B.avatar === opt.src ? 'selected' : ''}`}
+                    onClick={() => updateAvatar('B', opt.src)}
+                    title={opt.label}
+                  >
+                    <img src={opt.src} alt={opt.label} />
+                    <span>{opt.label}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+
+        <div className="session-picker" role="group" aria-label="Session length">
+          {(Object.keys(sessionPresets) as SessionLength[]).map(length => (
+            <button type="button" key={length} className={game.sessionLength === length ? 'selected' : ''} onClick={() => setSession(length)}>
+              <b>{sessionPresets[length].label}</b>
+              <small>{sessionPresets[length].description}</small>
+              <span>{sessionPresets[length].rounds.length} rounds</span>
+            </button>
+          ))}
+        </div>
+        <div className="name-fields">
+          <label>
+            <span>{game.mode === 'teams' ? 'Team A name' : 'Player A name'}</span>
+            <input value={game.teams.A.name} maxLength={28} onChange={event => updateName('A', event.target.value)} />
+          </label>
+          <span className="versus">VS</span>
+          <label>
+            <span>{game.mode === 'teams' ? 'Team B name' : 'Player B name'}</span>
+            <input value={game.teams.B.name} maxLength={28} onChange={event => updateName('B', event.target.value)} />
+          </label>
+        </div>
+        <p className="setup-note">{sessionPresets[game.sessionLength].description} Take turns, build connections, and collect contribution tokens.</p>
+        <button type="button" className="primary-action large" onClick={onStart}>
+          Ready — start game ({game.mode === 'teams' ? 'Two Teams' : 'Two Players'}) <span aria-hidden="true">→</span>
+        </button>
+      </section>
+    </main>
+  )
 }
 
 interface TeacherControlsProps { settings: GameSettings; teams: Record<TeamId, TeamState>; rounds: ReturnType<typeof getRound>[]; currentRound: number; timerPaused: boolean; onSettings: (key: keyof GameSettings, value?: string | boolean) => void; onReset: () => void; onRestart: () => void; onSkip: () => void; onChooseRound: (round: number) => void; onPause: () => void; onFullscreen: () => void; onRename: (team: TeamId, name: string) => void }
@@ -328,14 +466,14 @@ function GameView({ game, setGame, onResults }: { game: GameState; setGame: Disp
   }
 
   const updateSetting = (key: keyof GameSettings, value?: string | boolean) => setGame(current => ({ ...current, settings: { ...current.settings, [key]: value ?? !current.settings[key] } }))
-  const reset = () => setGame(current => ({ ...newGame(current.settings, current.mode, current.sessionLength, [current.teams.A.name, current.teams.B.name]), screen: 'setup' }))
+  const reset = () => setGame(current => ({ ...newGame(current.settings, current.mode, current.sessionLength, [current.teams.A.name, current.teams.B.name], [current.teams.A.avatar || '', current.teams.B.avatar || '']), screen: 'setup' }))
   const restart = () => { setRoundComplete(false); setLastReward(null); setRippleNodes([]); setTravel(null); setTimerPaused(false); setChallengeVersion(current => current + 1); setCurrentModifier(null); setExtraSeconds(0); setLifelinesUsed({ fiftyFifty: false, clue: false }); setLifelineToast(null) }
   const chooseRound = (roundIndex: number) => roundIndex === game.currentRound ? restart() : setGame(current => ({ ...current, currentRound: roundIndex, activeTeam: roundIndex % 2 === 0 ? 'A' : 'B' }))
   const fullscreen = () => { if (document.fullscreenElement) void document.exitFullscreen(); else void document.documentElement.requestFullscreen?.() }
   const rename = (team: TeamId, name: string) => setGame(current => ({ ...current, teams: { ...current.teams, [team]: { ...current.teams[team], name } } }))
   const startTravel = (item: string, nodes: string[]) => { setTravel({ item, nodes, nonce: Date.now() }); playSound('select'); window.setTimeout(() => setTravel(null), 2800) }
   const startRipple = (nodes: string[]) => { setRippleNodes(nodes); playSound('select') }
-  const handleGoHome = () => setGame(current => ({ ...newGame(current.settings, current.mode, current.sessionLength, [current.teams.A.name, current.teams.B.name]), screen: 'home' }))
+  const handleGoHome = () => setGame(current => ({ ...newGame(current.settings, current.mode, current.sessionLength, [current.teams.A.name, current.teams.B.name], [current.teams.A.avatar || '', current.teams.B.avatar || '']), screen: 'home' }))
   const handleToggleSettings = () => { const el = document.querySelector('.teacher-controls') as HTMLDetailsElement | null; if (el) el.open = !el.open }
   const handleOpenGuide = (tab?: 'concepts' | 'careers' | 'tokens') => { setGuideTab(tab || 'concepts'); setGuideOpen(true) }
 
@@ -390,6 +528,8 @@ function GameView({ game, setGame, onResults }: { game: GameState; setGame: Disp
               teamALocation={teamALocation}
               teamBLocation={teamBLocation}
               activeTeam={game.activeTeam}
+              teamAAvatar={game.teams.A.avatar}
+              teamBAvatar={game.teams.B.avatar}
               currentModifier={currentModifier}
               onSpinResult={mod => {
                 setCurrentModifier(mod)
@@ -462,8 +602,8 @@ export default function App() {
   const [hasSaved, setHasSaved] = useState(() => Boolean(readStored<GameState>(GAME_KEY)))
   useEffect(() => { writeStored(SETTINGS_KEY, game.settings) }, [game.settings])
   useEffect(() => { if (game.screen === 'game') { writeStored(GAME_KEY, game); setHasSaved(true) } }, [game])
-  const beginSetup = () => setGame(current => ({ ...newGame(current.settings, current.mode, current.sessionLength, [current.teams.A.name, current.teams.B.name]), screen: 'setup' }))
-  const beginGame = () => setGame(current => ({ ...newGame(current.settings, current.mode, current.sessionLength, [current.teams.A.name || 'Team A', current.teams.B.name || 'Team B']), screen: 'game' }))
+  const beginSetup = () => setGame(current => ({ ...newGame(current.settings, current.mode, current.sessionLength, [current.teams.A.name, current.teams.B.name], [current.teams.A.avatar || '', current.teams.B.avatar || '']), screen: 'setup' }))
+  const beginGame = () => setGame(current => ({ ...newGame(current.settings, current.mode, current.sessionLength, [current.teams.A.name || 'Team A', current.teams.B.name || 'Team B'], [current.teams.A.avatar || '', current.teams.B.avatar || '']), screen: 'game' }))
   const continueGame = () => { const saved = readStored<GameState>(GAME_KEY); if (saved) setGame({ ...normalizeGame(saved), screen: 'game' }) }
   const results = () => { removeStored(GAME_KEY); setHasSaved(false); setGame(current => ({ ...current, screen: 'results' })) }
   if (game.screen === 'setup') return <Setup game={game} setGame={setGame} onStart={beginGame} />
