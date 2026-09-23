@@ -7,6 +7,7 @@ export type SessionLength = 'quick' | 'standard' | 'full'
 export type ReadingMode = 'standard' | 'focus'
 export type UiLanguage = 'en' | 'hi'
 export type QuestionCategory = 'contribution' | 'skills' | 'connections' | 'care' | 'maintenance' | 'cooperation'
+export type LifelineType = 'fiftyFifty' | 'clue' | 'extraTime'
 
 export interface TeamState { id: TeamId; name: string; score: number; tokens: Record<TokenType, number>; contributions: number }
 export interface GameSettings { timerEnabled: boolean; soundEnabled: boolean; reducedMotion: boolean; readingMode: ReadingMode; language: UiLanguage }

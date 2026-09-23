@@ -111,10 +111,27 @@ function Home({ onNew, onContinue, hasSaved }: { onNew: () => void; onContinue: 
 }
 
 function Setup({ game, setGame, onStart }: { game: GameState; setGame: Dispatch<SetStateAction<GameState>>; onStart: () => void }) {
-  const setMode = (mode: GameMode) => setGame(current => newGame(current.settings, mode, current.sessionLength))
+  const setMode = (mode: GameMode) => {
+    setGame(current => {
+      const teamDefaults = ['The Contributors', 'The Community Builders']
+      const playerDefaults = ['Player A', 'Player B']
+      const newDefaults = mode === 'teams' ? teamDefaults : playerDefaults
+      const oldDefaults = mode === 'teams' ? playerDefaults : teamDefaults
+      const nameA = current.teams.A.name === oldDefaults[0] ? newDefaults[0] : current.teams.A.name
+      const nameB = current.teams.B.name === oldDefaults[1] ? newDefaults[1] : current.teams.B.name
+      return {
+        ...current,
+        mode,
+        teams: {
+          A: { ...current.teams.A, name: nameA },
+          B: { ...current.teams.B, name: nameB },
+        },
+      }
+    })
+  }
   const setSession = (sessionLength: SessionLength) => setGame(current => ({ ...current, sessionLength, activeRounds: sessionPresets[sessionLength].rounds }))
   const updateName = (team: TeamId, name: string) => setGame(current => ({ ...current, teams: { ...current.teams, [team]: { ...current.teams[team], name } } }))
-  return <main className="setup-screen"><section className="setup-card"><div className="chapter-marker"><span>13</span> Community Challenge</div><p className="eyebrow">Choose your play mode</p><h1>Build a better community <em>together.</em></h1><div className="mode-switch" role="group" aria-label="Game mode"><button type="button" className={game.mode === 'teams' ? 'selected' : ''} onClick={() => setMode('teams')}><span>♟</span><b>Two team mode</b><small>Perfect for a classroom</small></button><button type="button" className={game.mode === 'players' ? 'selected' : ''} onClick={() => setMode('players')}><span>⚉</span><b>Two player mode</b><small>Play head-to-head</small></button></div><div className="session-picker" role="group" aria-label="Session length">{(Object.keys(sessionPresets) as SessionLength[]).map(length => <button type="button" key={length} className={game.sessionLength === length ? 'selected' : ''} onClick={() => setSession(length)}><b>{sessionPresets[length].label}</b><small>{sessionPresets[length].description}</small><span>{sessionPresets[length].rounds.length} rounds</span></button>)}</div><div className="name-fields"><label><span>{game.mode === 'teams' ? 'Team A name' : 'Player A name'}</span><input value={game.teams.A.name} maxLength={28} onChange={event => updateName('A', event.target.value)} /></label><span className="versus">VS</span><label><span>{game.mode === 'teams' ? 'Team B name' : 'Player B name'}</span><input value={game.teams.B.name} maxLength={28} onChange={event => updateName('B', event.target.value)} /></label></div><p className="setup-note">{sessionPresets[game.sessionLength].description} Take turns, build connections, and collect contribution tokens.</p><button type="button" className="primary-action large" onClick={onStart}>Ready — start game <span aria-hidden="true">→</span></button></section></main>
+  return <main className="setup-screen"><section className="setup-card"><div className="chapter-marker"><span>13</span> Community Challenge</div><p className="eyebrow">Choose your play mode</p><h1>Build a better community <em>together.</em></h1><div className="mode-switch" role="group" aria-label="Game mode"><button type="button" className={game.mode === 'teams' ? 'selected' : ''} onClick={() => setMode('teams')}><span>♟</span><b>Two team mode</b><small>Perfect for a classroom</small></button><button type="button" className={game.mode === 'players' ? 'selected' : ''} onClick={() => setMode('players')}><span>⚉</span><b>Two player mode</b><small>Play head-to-head</small></button></div><div className="session-picker" role="group" aria-label="Session length">{(Object.keys(sessionPresets) as SessionLength[]).map(length => <button type="button" key={length} className={game.sessionLength === length ? 'selected' : ''} onClick={() => setSession(length)}><b>{sessionPresets[length].label}</b><small>{sessionPresets[length].description}</small><span>{sessionPresets[length].rounds.length} rounds</span></button>)}</div><div className="name-fields"><label><span>{game.mode === 'teams' ? 'Team A name' : 'Player A name'}</span><input value={game.teams.A.name} maxLength={28} onChange={event => updateName('A', event.target.value)} /></label><span className="versus">VS</span><label><span>{game.mode === 'teams' ? 'Team B name' : 'Player B name'}</span><input value={game.teams.B.name} maxLength={28} onChange={event => updateName('B', event.target.value)} /></label></div><p className="setup-note">{sessionPresets[game.sessionLength].description} Take turns, build connections, and collect contribution tokens.</p><button type="button" className="primary-action large" onClick={onStart}>Ready — start game ({game.mode === 'teams' ? 'Two Teams' : 'Two Players'}) <span aria-hidden="true">→</span></button></section></main>
 }
 
 interface TeacherControlsProps { settings: GameSettings; teams: Record<TeamId, TeamState>; rounds: ReturnType<typeof getRound>[]; currentRound: number; timerPaused: boolean; onSettings: (key: keyof GameSettings, value?: string | boolean) => void; onReset: () => void; onRestart: () => void; onSkip: () => void; onChooseRound: (round: number) => void; onPause: () => void; onFullscreen: () => void; onRename: (team: TeamId, name: string) => void }
@@ -124,18 +141,67 @@ function TeacherControls({ settings, teams, rounds, currentRound, timerPaused, o
 }
 
 function RewardCard({ reward, round, lastRound, onNext }: { reward: ChallengeReward; round: ReturnType<typeof getRound>; lastRound: boolean; onNext: () => void }) {
-  return <section className="reward-card" aria-live="polite"><div className="reward-burst" aria-hidden="true">✦</div><p className="eyebrow">Contribution collected</p><h2>{lastRound ? 'Community restored!' : 'Great connection!'}</h2><p>{reward.message}</p><div className="reward-numbers"><b>+{reward.points} points</b><span>+1 {reward.token} token</span></div>{reward.recognition && <span className="recognition-chip">★ {reward.recognition}</span>}<div className="learning-card"><b>Why this matters</b><p>{round.takeaway}</p><small>Discuss: {round.discussion}</small></div><button type="button" className="primary-action" onClick={onNext}>{lastRound ? 'View community report' : 'Pass turn & continue'} <span aria-hidden="true">→</span></button></section>
+  const [countdown, setCountdown] = useState(5)
+
+  useEffect(() => {
+    if (lastRound) return
+    const interval = setInterval(() => {
+      setCountdown(c => {
+        if (c <= 1) {
+          clearInterval(interval)
+          onNext()
+          return 0
+        }
+        return c - 1
+      })
+    }, 1000)
+    return () => clearInterval(interval)
+  }, [lastRound, onNext])
+
+  return (
+    <section className="reward-card" aria-live="polite">
+      <div className="reward-burst" aria-hidden="true">✦</div>
+      <p className="eyebrow">{reward.points > 0 ? 'Contribution collected' : 'Round completed'}</p>
+      <h2>{lastRound ? 'Community restored!' : reward.points > 0 ? 'Great connection!' : 'Good effort!'}</h2>
+      <p>{reward.message}</p>
+      {reward.points > 0 ? (
+        <div className="reward-numbers">
+          <b>+{reward.points} points</b>
+          <span>+1 {reward.token} token</span>
+        </div>
+      ) : (
+        <div className="reward-numbers zero-points">
+          <b>+0 points</b>
+          <span>No points awarded</span>
+        </div>
+      )}
+      {reward.recognition && <span className="recognition-chip">★ {reward.recognition}</span>}
+      <div className="learning-card">
+        <b>Why this matters</b>
+        <p>{round.takeaway}</p>
+        <small>Discuss: {round.discussion}</small>
+      </div>
+      <button type="button" className="primary-action auto-next-btn" onClick={onNext}>
+        {lastRound ? 'View community report' : `Next turn in ${countdown}s (or click to continue)`} <span aria-hidden="true">→</span>
+      </button>
+    </section>
+  )
 }
 
 function GameView({ game, setGame, onResults }: { game: GameState; setGame: Dispatch<SetStateAction<GameState>>; onResults: () => void }) {
   const [roundComplete, setRoundComplete] = useState(false)
   const [lastReward, setLastReward] = useState<ChallengeReward | null>(null)
   const [selectedLocation, setSelectedLocation] = useState<string | null>(null)
-  const [rippleNodes, setRippleNodes] = useState<string[]>([]); const [travel, setTravel] = useState<{ item: string; nodes: string[]; nonce: number } | null>(null)
-  const [timerPaused, setTimerPaused] = useState(false); const [challengeVersion, setChallengeVersion] = useState(0)
+  const [rippleNodes, setRippleNodes] = useState<string[]>([])
+  const [travel, setTravel] = useState<{ item: string; nodes: string[]; nonce: number } | null>(null)
+  const [timerPaused, setTimerPaused] = useState(false)
+  const [challengeVersion, setChallengeVersion] = useState(0)
   const [currentModifier, setCurrentModifier] = useState<SpinModifier | null>(null)
   const [guideOpen, setGuideOpen] = useState(false)
   const [guideTab, setGuideTab] = useState<'concepts' | 'careers' | 'tokens'>('concepts')
+  const [extraSeconds, setExtraSeconds] = useState(0)
+  const [lifelinesUsed, setLifelinesUsed] = useState<{ fiftyFifty: boolean; clue: boolean }>({ fiftyFifty: false, clue: false })
+  const [lifelineToast, setLifelineToast] = useState<string | null>(null)
 
   const sessionRounds = game.activeRounds.map(getRound)
   const round = sessionRounds[game.currentRound]
@@ -148,10 +214,61 @@ function GameView({ game, setGame, onResults }: { game: GameState; setGame: Disp
   const teamBLocation = locationKeys[game.teams.B.contributions % locationKeys.length]
 
   const question = useMemo(() => selectUnusedQuestion(questions, game.usedQuestionIds, round.questionCategory, game.sessionSeed + game.currentRound + challengeVersion) || questions[0], [game.usedQuestionIds, game.currentRound, game.sessionSeed, round.questionCategory, challengeVersion])
-  const seconds = useTimer(round.time, game.settings.timerEnabled && !timerPaused && !roundComplete, `${game.currentRound}-${challengeVersion}`)
+  const totalRoundTime = round.time + extraSeconds
+  const seconds = useTimer(totalRoundTime, game.settings.timerEnabled && !timerPaused && !roundComplete, `${game.currentRound}-${challengeVersion}-${extraSeconds}`)
 
-  useEffect(() => { setRoundComplete(false); setLastReward(null); setRippleNodes([]); setTravel(null); setTimerPaused(false); setCurrentModifier(null) }, [game.currentRound, round.time])
+  useEffect(() => {
+    setRoundComplete(false)
+    setLastReward(null)
+    setRippleNodes([])
+    setTravel(null)
+    setTimerPaused(false)
+    setCurrentModifier(null)
+    setExtraSeconds(0)
+    setLifelinesUsed({ fiftyFifty: false, clue: false })
+    setLifelineToast(null)
+  }, [game.currentRound, round.time])
+
   useEffect(() => { if (seconds === 5 && game.settings.timerEnabled && !timerPaused) playSound('warning') }, [seconds, game.settings.timerEnabled, playSound, timerPaused])
+
+  const handleUseLifeline = (type: 'fiftyFifty' | 'clue' | 'extraTime') => {
+    const cost = type === 'fiftyFifty' ? 3 : 2
+    const isFree = currentModifier?.effect === 'freeLifeline' && currentModifier.lifelineType === type
+    const actualCost = isFree ? 0 : cost
+
+    if (!isFree && activeTeam.score < actualCost) {
+      playSound('warning')
+      setLifelineToast(`Not enough points to use ${type === 'fiftyFifty' ? '50:50' : type === 'clue' ? 'Clue' : '+15s'}! Need ${actualCost} pts.`)
+      window.setTimeout(() => setLifelineToast(null), 2500)
+      return false
+    }
+
+    setGame(current => ({
+      ...current,
+      teams: {
+        ...current.teams,
+        [current.activeTeam]: {
+          ...current.teams[current.activeTeam],
+          score: Math.max(0, current.teams[current.activeTeam].score - actualCost),
+        },
+      },
+    }))
+
+    if (type === 'fiftyFifty') setLifelinesUsed(prev => ({ ...prev, fiftyFifty: true }))
+    if (type === 'clue') setLifelinesUsed(prev => ({ ...prev, clue: true }))
+    if (type === 'extraTime') setExtraSeconds(prev => prev + 15)
+
+    playSound('coin')
+    const typeLabel = type === 'fiftyFifty' ? '✂️ 50:50' : type === 'clue' ? '💡 Clue' : '⏱️ +15s Time'
+    setLifelineToast(`${typeLabel} activated! ${actualCost > 0 ? `-${actualCost} points deducted from ${activeTeam.name}` : 'Free lifeline from Spin!'}`)
+    window.setTimeout(() => setLifelineToast(null), 3000)
+    return true
+  }
+
+  const handlePassTurn = (newTeamId: TeamId) => {
+    setGame(current => ({ ...current, activeTeam: newTeamId }))
+    playSound('select')
+  }
 
   const complete = (reward: ChallengeReward) => {
     const recipient = reward.teamId || game.activeTeam
@@ -164,10 +281,10 @@ function GameView({ game, setGame, onResults }: { game: GameState; setGame: Disp
     setGame(current => {
       const team = current.teams[recipient]
       const other = current.teams[toggleTeam(recipient)]
-      const tokens = { ...team.tokens, [reward.token]: team.tokens[reward.token] + 1 + extraToken }
+      const tokens = { ...team.tokens, [reward.token]: team.tokens[reward.token] + (points > 0 ? 1 : 0) + extraToken }
       const updatedTeams = {
         ...current.teams,
-        [recipient]: { ...team, score: team.score + points, contributions: team.contributions + 1, tokens },
+        [recipient]: { ...team, score: team.score + points, contributions: team.contributions + (points > 0 ? 1 : 0), tokens },
       }
       if (currentModifier?.effect === 'teamwork') {
         updatedTeams[other.id] = { ...other, score: other.score + 3 }
@@ -188,17 +305,31 @@ function GameView({ game, setGame, onResults }: { game: GameState; setGame: Disp
     })
     setLastReward({ ...reward, points })
     setRoundComplete(true)
-    launchConfetti(70)
-    playSound('whoop')
-    window.setTimeout(() => {
-      playSound(round.type === 'crisis' ? 'restore' : 'reward')
-    }, 180)
+    if (points > 0) {
+      launchConfetti(70)
+      playSound('whoop')
+      window.setTimeout(() => {
+        playSound(round.type === 'crisis' ? 'restore' : 'reward')
+      }, 180)
+    } else {
+      playSound('warning')
+    }
   }
 
-  const nextRound = () => { if (game.currentRound === sessionRounds.length - 1) { onResults(); return } setGame(current => ({ ...current, activeTeam: toggleTeam(current.activeTeam), currentRound: current.currentRound + 1 })) }
+  const nextRound = () => {
+    if (game.currentRound === sessionRounds.length - 1) { onResults(); return }
+    const nextRoundIndex = game.currentRound + 1
+    const nextStartingTeam: TeamId = nextRoundIndex % 2 === 0 ? 'A' : 'B'
+    setGame(current => ({
+      ...current,
+      activeTeam: nextStartingTeam,
+      currentRound: nextRoundIndex,
+    }))
+  }
+
   const updateSetting = (key: keyof GameSettings, value?: string | boolean) => setGame(current => ({ ...current, settings: { ...current.settings, [key]: value ?? !current.settings[key] } }))
   const reset = () => setGame(current => ({ ...newGame(current.settings, current.mode, current.sessionLength, [current.teams.A.name, current.teams.B.name]), screen: 'setup' }))
-  const restart = () => { setRoundComplete(false); setLastReward(null); setRippleNodes([]); setTravel(null); setTimerPaused(false); setChallengeVersion(current => current + 1); setCurrentModifier(null) }
+  const restart = () => { setRoundComplete(false); setLastReward(null); setRippleNodes([]); setTravel(null); setTimerPaused(false); setChallengeVersion(current => current + 1); setCurrentModifier(null); setExtraSeconds(0); setLifelinesUsed({ fiftyFifty: false, clue: false }); setLifelineToast(null) }
   const chooseRound = (roundIndex: number) => roundIndex === game.currentRound ? restart() : setGame(current => ({ ...current, currentRound: roundIndex, activeTeam: roundIndex % 2 === 0 ? 'A' : 'B' }))
   const fullscreen = () => { if (document.fullscreenElement) void document.exitFullscreen(); else void document.documentElement.requestFullscreen?.() }
   const rename = (team: TeamId, name: string) => setGame(current => ({ ...current, teams: { ...current.teams, [team]: { ...current.teams[team], name } } }))
@@ -208,7 +339,104 @@ function GameView({ game, setGame, onResults }: { game: GameState; setGame: Disp
   const handleToggleSettings = () => { const el = document.querySelector('.teacher-controls') as HTMLDetailsElement | null; if (el) el.open = !el.open }
   const handleOpenGuide = (tab?: 'concepts' | 'careers' | 'tokens') => { setGuideTab(tab || 'concepts'); setGuideOpen(true) }
 
-  return <main className={`game-screen ${game.settings.reducedMotion ? 'reduce-motion' : ''} ${game.settings.readingMode === 'focus' ? 'focus-reading' : ''}`}><a className="skip-link" href="#challenge">Skip to current challenge</a><header className="game-header"><div className="brand-banner"><div className="brand-title"><h1><span className="title-the">The</span> <span className="title-value">Value</span> <span className="title-of">of</span> <span className="title-work">Work</span></h1><p className="brand-subtitle">Different Work. Brighter Lives.</p></div></div><ChallengeToolbar activeType={round.type} roundTypes={game.activeRounds} /><div className="game-tools"><button type="button" className="sound-toggle-btn" onClick={() => updateSetting('soundEnabled')} aria-label={game.settings.soundEnabled ? 'Mute sound' : 'Enable sound'}><span>{game.settings.soundEnabled ? '🔊' : '🔇'}</span></button><TimerRing seconds={seconds} totalSeconds={round.time} enabled={game.settings.timerEnabled} paused={timerPaused} /><TeacherControls settings={game.settings} teams={game.teams} rounds={sessionRounds} currentRound={game.currentRound} timerPaused={timerPaused} onSettings={updateSetting} onReset={reset} onRestart={restart} onSkip={nextRound} onChooseRound={chooseRound} onPause={() => setTimerPaused(current => !current)} onFullscreen={fullscreen} onRename={rename} /></div></header><div className="game-body"><Sidebar onHome={handleGoHome} onSettings={handleToggleSettings} onOpenGuide={handleOpenGuide} /><div className="game-main-area"><TeamPanel team={game.teams.A} active={game.activeTeam === 'A'} side="left" /><section className="center-stage"><div className="turn-banner"><div className="turn-banner-inner"><span className="turn-team-name">🎯 {activeTeam.name}'s Turn!</span><p className="turn-kicker">{round.kicker}</p></div><div className="round-info"><span className="round-badge">{round.icon} {round.title}</span><span className="round-counter">Round {game.currentRound + 1} / {sessionRounds.length}</span></div></div><CommunityBoard completed={game.completedChallenges.length} selected={selectedLocation} onSelect={setSelectedLocation} rippleNodes={rippleNodes} travel={travel} reducedMotion={game.settings.reducedMotion} teamALocation={teamALocation} teamBLocation={teamBLocation} activeTeam={game.activeTeam} currentModifier={currentModifier} onSpinResult={mod => { setCurrentModifier(mod); playSound('coin'); launchConfetti(35) }} onSpinTick={() => playSound('spinTick')} /><div id="challenge" className="challenge-slot">{roundComplete && lastReward ? <RewardCard reward={lastReward} round={round} lastRound={game.currentRound === sessionRounds.length - 1} onNext={nextRound} /> : <ChallengePanel key={`${round.type}-${game.currentRound}-${challengeVersion}`} type={round.type} activeTeamName={activeTeam.name} stealTeamName={otherTeam.name} stealTeamId={otherTeam.id} question={question} variantSeed={game.sessionSeed + game.currentRound * 11 + challengeVersion} onComplete={complete} onRipple={startRipple} onTravel={startTravel} />}</div></section><TeamPanel team={game.teams.B} active={game.activeTeam === 'B'} side="right" /></div><div className="motivational-sign"><span>📋</span><p><b>WORK BUILDS<br/>BRIGHTER TOMORROWS</b></p></div></div><LearningGuideModal isOpen={guideOpen} initialTab={guideTab} onClose={() => setGuideOpen(false)} /></main>
+  return (
+    <main className={`game-screen ${game.settings.reducedMotion ? 'reduce-motion' : ''} ${game.settings.readingMode === 'focus' ? 'focus-reading' : ''}`}>
+      <a className="skip-link" href="#challenge">Skip to current challenge</a>
+      <header className="game-header">
+        <div className="brand-banner">
+          <div className="brand-title">
+            <h1><span className="title-the">The</span> <span className="title-value">Value</span> <span className="title-of">of</span> <span className="title-work">Work</span></h1>
+            <p className="brand-subtitle">Different Work. Brighter Lives.</p>
+          </div>
+        </div>
+        <ChallengeToolbar activeType={round.type} roundTypes={game.activeRounds} />
+        <div className="game-tools">
+          <button type="button" className="sound-toggle-btn" onClick={() => updateSetting('soundEnabled')} aria-label={game.settings.soundEnabled ? 'Mute sound' : 'Enable sound'}>
+            <span>{game.settings.soundEnabled ? '🔊' : '🔇'}</span>
+          </button>
+          <TimerRing seconds={seconds} totalSeconds={totalRoundTime} enabled={game.settings.timerEnabled} paused={timerPaused} />
+          <TeacherControls settings={game.settings} teams={game.teams} rounds={sessionRounds} currentRound={game.currentRound} timerPaused={timerPaused} onSettings={updateSetting} onReset={reset} onRestart={restart} onSkip={nextRound} onChooseRound={chooseRound} onPause={() => setTimerPaused(current => !current)} onFullscreen={fullscreen} onRename={rename} />
+        </div>
+      </header>
+
+      {lifelineToast && (
+        <div className="lifeline-toast" role="alert" aria-live="assertive">
+          <span>{lifelineToast}</span>
+        </div>
+      )}
+
+      <div className="game-body">
+        <Sidebar onHome={handleGoHome} onSettings={handleToggleSettings} onOpenGuide={handleOpenGuide} />
+        <div className="game-main-area">
+          <TeamPanel team={game.teams.A} active={game.activeTeam === 'A'} side="left" />
+          <section className="center-stage">
+            <div className="turn-banner">
+              <div className="turn-banner-inner">
+                <span className="turn-team-name">🎯 {activeTeam.name}'s Turn!</span>
+                <p className="turn-kicker">{round.kicker}</p>
+              </div>
+              <div className="round-info">
+                <span className="round-badge">{round.icon} {round.title}</span>
+                <span className="round-counter">Round {game.currentRound + 1} / {sessionRounds.length}</span>
+              </div>
+            </div>
+            <CommunityBoard
+              completed={game.completedChallenges.length}
+              selected={selectedLocation}
+              onSelect={setSelectedLocation}
+              rippleNodes={rippleNodes}
+              travel={travel}
+              reducedMotion={game.settings.reducedMotion}
+              teamALocation={teamALocation}
+              teamBLocation={teamBLocation}
+              activeTeam={game.activeTeam}
+              currentModifier={currentModifier}
+              onSpinResult={mod => {
+                setCurrentModifier(mod)
+                playSound('coin')
+                launchConfetti(35)
+                if (mod.effect === 'freeLifeline') {
+                  const label = mod.lifelineType === 'fiftyFifty' ? 'Free 50:50 Lifeline' : 'Free Community Clue'
+                  setLifelineToast(`🎁 Spin Bonus: Won ${label}! (0 points cost)`)
+                  setTimeout(() => setLifelineToast(null), 3500)
+                }
+              }}
+              onSpinTick={() => playSound('spinTick')}
+            />
+            <div id="challenge" className="challenge-slot">
+              {roundComplete && lastReward ? (
+                <RewardCard reward={lastReward} round={round} lastRound={game.currentRound === sessionRounds.length - 1} onNext={nextRound} />
+              ) : (
+                <ChallengePanel
+                  key={`${round.type}-${game.currentRound}-${challengeVersion}`}
+                  type={round.type}
+                  activeTeamName={activeTeam.name}
+                  activeTeamId={game.activeTeam}
+                  stealTeamName={otherTeam.name}
+                  stealTeamId={otherTeam.id}
+                  question={question}
+                  variantSeed={game.sessionSeed + game.currentRound * 11 + challengeVersion}
+                  onComplete={complete}
+                  onRipple={startRipple}
+                  onTravel={startTravel}
+                  onPassTurn={handlePassTurn}
+                  onUseLifeline={handleUseLifeline}
+                  lifelinesUsed={lifelinesUsed}
+                  activeTeamScore={activeTeam.score}
+                />
+              )}
+            </div>
+          </section>
+          <TeamPanel team={game.teams.B} active={game.activeTeam === 'B'} side="right" />
+        </div>
+        <div className="motivational-sign">
+          <span>📋</span>
+          <p><b>WORK BUILDS<br />BRIGHTER TOMORROWS</b></p>
+        </div>
+      </div>
+      <LearningGuideModal isOpen={guideOpen} initialTab={guideTab} onClose={() => setGuideOpen(false)} />
+    </main>
+  )
 }
 
 function Results({ game, onNew }: { game: GameState; onNew: () => void }) {

@@ -1,21 +1,24 @@
 import { useEffect, useRef, useState } from 'react'
 
+import type { LifelineType } from '../game/types'
+
 export interface SpinModifier {
   id: string
   label: string
   icon: string
   description: string
-  effect: 'double' | 'token' | 'time' | 'bonusPoints' | 'teamwork' | 'normal'
+  effect: 'double' | 'token' | 'time' | 'bonusPoints' | 'teamwork' | 'normal' | 'freeLifeline'
   value?: number
+  lifelineType?: LifelineType
 }
 
 export const SPIN_MODIFIERS: SpinModifier[] = [
   { id: 'double', label: '2x Points', icon: '🎯', description: 'Double points for this round!', effect: 'double', value: 2 },
+  { id: 'freeFifty', label: 'Free 50:50', icon: '✂️', description: 'Free 50:50 Lifeline! (No points cost)', effect: 'freeLifeline', lifelineType: 'fiftyFifty' },
   { id: 'token', label: 'Bonus Token', icon: '💎', description: '+1 Community Token reward!', effect: 'token', value: 1 },
+  { id: 'freeClue', label: 'Free Clue', icon: '💡', description: 'Free Community Clue! (No points cost)', effect: 'freeLifeline', lifelineType: 'clue' },
   { id: 'time', label: '+10s Time', icon: '⏱️', description: '10 seconds added to timer!', effect: 'time', value: 10 },
-  { id: 'star', label: '+5 Star Pts', icon: '🌟', description: '+5 instant bonus points!', effect: 'bonusPoints', value: 5 },
   { id: 'teamwork', label: 'Team Boost', icon: '🤝', description: 'Both teams get +3 on success!', effect: 'teamwork', value: 3 },
-  { id: 'normal', label: 'Standard', icon: '🎲', description: 'Good luck on this challenge!', effect: 'normal' },
 ]
 
 interface SpinnerWheelProps {

@@ -19,6 +19,7 @@ export interface ChallengeReward {
 interface ChallengePanelProps {
   type: ChallengeType
   activeTeamName: string
+  activeTeamId: TeamId
   stealTeamName: string
   stealTeamId: TeamId
   question: QuizQuestion
@@ -26,6 +27,10 @@ interface ChallengePanelProps {
   onComplete: (reward: ChallengeReward) => void
   onRipple: (nodes: string[]) => void
   onTravel: (item: string, nodes: string[]) => void
+  onPassTurn?: (teamId: TeamId) => void
+  onUseLifeline?: (type: 'fiftyFifty' | 'clue' | 'extraTime') => boolean
+  lifelinesUsed?: { fiftyFifty: boolean; clue: boolean }
+  activeTeamScore?: number
 }
 
 const chooseVariant = <T,>(items: T[], seed: number) => items[Math.abs(seed) % items.length]
@@ -37,34 +42,249 @@ function ChallengeFrame({ children, label, title, instruction }: { children: Rea
   </section>
 }
 
-function QuizChallenge({ question, activeTeamName, stealTeamName, stealTeamId, onComplete }: Omit<ChallengePanelProps, 'type' | 'onRipple' | 'onTravel' | 'variantSeed'>) {
-  const [phase, setPhase] = useState<'answer' | 'steal'>('answer')
-  const [response, setResponse] = useState<string | null>(null)
-  const choose = (option: string) => {
-    if (phase === 'answer' && option === question.answer) onComplete({ points: question.points, token: 'work', message: `${question.explanation} Great connection!`, discovered: [question.category] })
-    else if (phase === 'answer') { setPhase('steal'); setResponse(`Not quite. ${question.hint} The other team can steal.`) }
-    else if (option === question.answer) onComplete({ points: 5, token: 'connection', message: `${stealTeamName} made the connection and stole 5 points! ${question.explanation}`, discovered: [question.category], teamId: stealTeamId })
-    else setResponse(`Look again. ${question.hint}`)
-  }
-  return <ChallengeFrame label="✦" title="Quick Quiz" instruction={`${phase === 'answer' ? activeTeamName : stealTeamName}, choose the contribution that fits best.`}>
-    <div className="question-card"><span className="difficulty">{question.difficulty}</span><h3>{question.question}</h3></div>
-    <div className="answer-grid">{question.options.map((option, index) => <button type="button" className="answer-option" onClick={() => choose(option)} key={option}><b>{String.fromCharCode(65 + index)}</b>{option}</button>)}</div>
-    <div className="hint-row"><span>Hint:</span> {question.hint}</div>{response && <p className="feedback-note" aria-live="polite">{response}</p>}
-  </ChallengeFrame>
+function LifelineBar({
+  onUseLifeline,
+  lifelinesUsed,
+  activeTeamScore,
+}: {
+  onUseLifeline?: (type: 'fiftyFifty' | 'clue' | 'extraTime') => boolean
+  lifelinesUsed?: { fiftyFifty: boolean; clue: boolean }
+  activeTeamScore?: number
+}) {
+  if (!onUseLifeline) return null
+  const score = activeTeamScore ?? 0
+  const used = lifelinesUsed ?? { fiftyFifty: false, clue: false }
+
+  return (
+    <div className="lifeline-bar" role="toolbar" aria-label="Lifelines">
+      <span className="lifeline-label">🆘 Lifelines:</span>
+      <button
+        type="button"
+        className={`lifeline-chip ${used.fiftyFifty ? 'used' : ''}`}
+        disabled={used.fiftyFifty || score < 3}
+        onClick={() => onUseLifeline('fiftyFifty')}
+        title="Eliminate two wrong choices (-3 points)"
+      >
+        <span>✂️ 50:50</span> <small>(-3 pts)</small>
+      </button>
+      <button
+        type="button"
+        className={`lifeline-chip ${used.clue ? 'used' : ''}`}
+        disabled={used.clue || score < 2}
+        onClick={() => onUseLifeline('clue')}
+        title="Reveal an extra community clue (-2 points)"
+      >
+        <span>💡 Clue</span> <small>(-2 pts)</small>
+      </button>
+      <button
+        type="button"
+        className="lifeline-chip"
+        disabled={score < 2}
+        onClick={() => onUseLifeline('extraTime')}
+        title="Add +15 seconds to round timer (-2 points)"
+      >
+        <span>⏱️ +15s</span> <small>(-2 pts)</small>
+      </button>
+    </div>
+  )
 }
 
-function ConnectChallenge({ activeTeamName, variantSeed, onComplete }: Pick<ChallengePanelProps, 'activeTeamName' | 'variantSeed' | 'onComplete'>) {
+function QuizChallenge({
+  question,
+  activeTeamName,
+  activeTeamId,
+  stealTeamName,
+  stealTeamId,
+  onComplete,
+  onPassTurn,
+  onUseLifeline,
+  lifelinesUsed,
+  activeTeamScore,
+}: Omit<ChallengePanelProps, 'type' | 'onRipple' | 'onTravel' | 'variantSeed'>) {
+  const [phase, setPhase] = useState<'initial' | 'passed'>('initial')
+  const [attemptingTeam, setAttemptingTeam] = useState<TeamId>(activeTeamId)
+  const [eliminatedOptions, setEliminatedOptions] = useState<string[]>([])
+  const [response, setResponse] = useState<string | null>(null)
+
+  const fiftyFiftyEliminated = useMemo(() => {
+    if (!lifelinesUsed?.fiftyFifty) return []
+    const wrong = question.options.filter(opt => opt !== question.answer)
+    return wrong.slice(0, 2)
+  }, [lifelinesUsed?.fiftyFifty, question])
+
+  const allEliminated = [...new Set([...eliminatedOptions, ...fiftyFiftyEliminated])]
+
+  const choose = (option: string) => {
+    if (allEliminated.includes(option)) return
+
+    if (option === question.answer) {
+      if (phase === 'initial') {
+        onComplete({
+          points: question.points,
+          token: 'work',
+          message: `${activeTeamName} answered correctly! ${question.explanation}`,
+          discovered: [question.category],
+          teamId: activeTeamId,
+        })
+      } else {
+        onComplete({
+          points: question.points,
+          token: 'connection',
+          message: `${stealTeamName} stepped up with the right answer and scored ${question.points} points! ${question.explanation}`,
+          discovered: [question.category],
+          teamId: stealTeamId,
+        })
+      }
+    } else {
+      setEliminatedOptions(prev => [...prev, option])
+      if (phase === 'initial') {
+        setPhase('passed')
+        setAttemptingTeam(stealTeamId)
+        onPassTurn?.(stealTeamId)
+        setResponse(`❌ Not quite! Turn passed to ${stealTeamName}. Your turn to attempt!`)
+      } else {
+        setResponse(`❌ Incorrect answer. Neither team got the point! The correct answer was "${question.answer}".`)
+        window.setTimeout(() => {
+          onComplete({
+            points: 0,
+            token: 'work',
+            message: `Neither team got the right answer. The correct answer was "${question.answer}". ${question.explanation}`,
+            teamId: stealTeamId,
+          })
+        }, 1500)
+      }
+    }
+  }
+
+  return (
+    <ChallengeFrame
+      label="✦"
+      title="Quick Quiz"
+      instruction={
+        phase === 'passed'
+          ? `🔄 Passed to ${stealTeamName}! Choose the contribution that fits best.`
+          : `${activeTeamName}, choose the contribution that fits best.`
+      }
+    >
+      <LifelineBar onUseLifeline={onUseLifeline} lifelinesUsed={lifelinesUsed} activeTeamScore={activeTeamScore} />
+
+      {lifelinesUsed?.clue && (
+        <div className="lifeline-clue-card" aria-live="polite">
+          <b>💡 Community Clue:</b> {question.hint} Look closely at which service or person depends directly on this work!
+        </div>
+      )}
+
+      <div className="question-card">
+        {phase === 'passed' && <span className="passed-badge">🔄 Passed to {stealTeamName}</span>}
+        <span className="difficulty">{question.difficulty}</span>
+        <h3>{question.question}</h3>
+      </div>
+      <div className="answer-grid">
+        {question.options.map((option, index) => {
+          const isEliminated = allEliminated.includes(option)
+          return (
+            <button
+              type="button"
+              className={`answer-option ${isEliminated ? 'eliminated' : ''}`}
+              disabled={isEliminated}
+              onClick={() => choose(option)}
+              key={option}
+            >
+              <b>{String.fromCharCode(65 + index)}</b>
+              <span>{option}</span>
+              {isEliminated && <span className="eliminated-tag">✕</span>}
+            </button>
+          )
+        })}
+      </div>
+      <div className="hint-row"><span>Hint:</span> {question.hint}</div>
+      {response && <p className="feedback-note" aria-live="polite">{response}</p>}
+    </ChallengeFrame>
+  )
+}
+
+function ConnectChallenge({
+  activeTeamName,
+  activeTeamId,
+  stealTeamName,
+  stealTeamId,
+  variantSeed,
+  onComplete,
+  onPassTurn,
+  onUseLifeline,
+  lifelinesUsed,
+  activeTeamScore,
+}: Pick<ChallengePanelProps, 'activeTeamName' | 'activeTeamId' | 'stealTeamName' | 'stealTeamId' | 'variantSeed' | 'onComplete' | 'onPassTurn' | 'onUseLifeline' | 'lifelinesUsed' | 'activeTeamScore'>) {
   const scenario = chooseVariant(connectScenarios, variantSeed)
   const [selected, setSelected] = useState<string | null>(null)
+  const [phase, setPhase] = useState<'initial' | 'passed'>('initial')
   const [feedback, setFeedback] = useState('')
-  const submit = () => selected === scenario.missing
-    ? onComplete({ points: 10, token: 'connection', message: `Connected! ${scenario.explanation}`, discovered: [scenario.missing] })
-    : setFeedback(`Follow the connection from ${scenario.beforeMissing}. Which contribution can help the next step happen?`)
-  return <ChallengeFrame label="↗" title="Connect the Work" instruction={`${activeTeamName}, complete the relationship by choosing the missing contribution.`}>
-    <div className="vertical-chain"><span>{scenario.start}</span><i>↓</i><span>{scenario.beforeMissing}</span><i>↓</i><button type="button" className={`missing-card ${selected ? 'filled' : ''}`} onClick={() => setSelected(null)}>{selected || 'Choose the missing contribution'}</button><i>↓</i><span>{scenario.end}</span></div>
-    <div className="choice-pills">{scenario.options.map(option => <button type="button" key={option} className={selected === option ? 'chosen' : ''} onClick={() => setSelected(option)}>{option}</button>)}</div>
-    <button type="button" className="primary-action" disabled={!selected} onClick={submit}>Connect the chain <span aria-hidden="true">→</span></button>{feedback && <p className="feedback-note" aria-live="polite">{feedback}</p>}
-  </ChallengeFrame>
+  const [eliminatedOptions, setEliminatedOptions] = useState<string[]>([])
+
+  const submit = () => {
+    if (!selected) return
+    if (selected === scenario.missing) {
+      const recipient = phase === 'initial' ? activeTeamId : stealTeamId
+      const name = phase === 'initial' ? activeTeamName : stealTeamName
+      onComplete({ points: 10, token: 'connection', message: `Connected! ${name} made the right link: ${scenario.explanation}`, discovered: [scenario.missing], teamId: recipient })
+    } else {
+      setEliminatedOptions(prev => [...prev, selected])
+      if (phase === 'initial') {
+        setPhase('passed')
+        onPassTurn?.(stealTeamId)
+        setSelected(null)
+        setFeedback(`❌ Not quite! Turn passed to ${stealTeamName}. Which contribution helps the next step happen?`)
+      } else {
+        setFeedback(`❌ Incorrect. Neither team got the point! The missing contribution was "${scenario.missing}".`)
+        window.setTimeout(() => {
+          onComplete({ points: 0, token: 'connection', message: `Neither team got it right. The missing contribution was "${scenario.missing}". ${scenario.explanation}`, teamId: stealTeamId })
+        }, 1500)
+      }
+    }
+  }
+
+  return (
+    <ChallengeFrame
+      label="↗"
+      title="Connect the Work"
+      instruction={
+        phase === 'passed'
+          ? `🔄 Passed to ${stealTeamName}! Complete the relationship by choosing the missing contribution.`
+          : `${activeTeamName}, complete the relationship by choosing the missing contribution.`
+      }
+    >
+      <LifelineBar onUseLifeline={onUseLifeline} lifelinesUsed={lifelinesUsed} activeTeamScore={activeTeamScore} />
+
+      <div className="vertical-chain">
+        <span>{scenario.start}</span><i>↓</i>
+        <span>{scenario.beforeMissing}</span><i>↓</i>
+        <button type="button" className={`missing-card ${selected ? 'filled' : ''}`} onClick={() => setSelected(null)}>
+          {selected || 'Choose the missing contribution'}
+        </button><i>↓</i>
+        <span>{scenario.end}</span>
+      </div>
+      <div className="choice-pills">
+        {scenario.options.map(option => {
+          const isEliminated = eliminatedOptions.includes(option)
+          return (
+            <button
+              type="button"
+              key={option}
+              disabled={isEliminated}
+              className={`${selected === option ? 'chosen' : ''} ${isEliminated ? 'eliminated' : ''}`}
+              onClick={() => setSelected(option)}
+            >
+              {option} {isEliminated && '✕'}
+            </button>
+          )
+        })}
+      </div>
+      <button type="button" className="primary-action" disabled={!selected} onClick={submit}>
+        Connect the chain <span aria-hidden="true">→</span>
+      </button>
+      {feedback && <p className="feedback-note" aria-live="polite">{feedback}</p>}
+    </ChallengeFrame>
+  )
 }
 
 function WorkChainChallenge({ activeTeamName, variantSeed, onComplete, onTravel }: Pick<ChallengePanelProps, 'activeTeamName' | 'variantSeed' | 'onComplete' | 'onTravel'>) {
@@ -98,15 +318,114 @@ function WhatIfChallenge({ activeTeamName, variantSeed, onComplete, onRipple }: 
   </ChallengeFrame>
 }
 
-function DetectiveChallenge({ activeTeamName, variantSeed, onComplete }: Pick<ChallengePanelProps, 'activeTeamName' | 'variantSeed' | 'onComplete'>) {
+function DetectiveChallenge({
+  activeTeamName,
+  activeTeamId,
+  stealTeamName,
+  stealTeamId,
+  variantSeed,
+  onComplete,
+  onPassTurn,
+  onUseLifeline,
+  lifelinesUsed,
+  activeTeamScore,
+}: Pick<ChallengePanelProps, 'activeTeamName' | 'activeTeamId' | 'stealTeamName' | 'stealTeamId' | 'variantSeed' | 'onComplete' | 'onPassTurn' | 'onUseLifeline' | 'lifelinesUsed' | 'activeTeamScore'>) {
   const scenario = chooseVariant(detectiveScenarios, variantSeed)
-  const [seen, setSeen] = useState<number[]>([]); const [answer, setAnswer] = useState<string | null>(null); const [feedback, setFeedback] = useState('')
+  const [seen, setSeen] = useState<number[]>([])
+  const [answer, setAnswer] = useState<string | null>(null)
+  const [phase, setPhase] = useState<'initial' | 'passed'>('initial')
+  const [eliminatedOptions, setEliminatedOptions] = useState<string[]>([])
+  const [feedback, setFeedback] = useState('')
   const inspect = (index: number) => setSeen(current => current.includes(index) ? current : [...current, index])
-  const solve = () => answer === scenario.answer ? onComplete({ points: 15, token: 'skill', message: `Case solved! ${scenario.explanation}`, problems: 1, discovered: ['Investigation', 'Problem solving'], recognition: 'Careful Investigator' }) : setFeedback('Use every clue. Which contribution restores the missing work connection?')
-  return <ChallengeFrame label="⌕" title="Work Detective" instruction={`${activeTeamName}, inspect every clue, then solve the community problem.`}>
-    <div className="detective-title"><span aria-hidden="true">🔎</span><div><p>CASE FILE</p><h3>{scenario.title}</h3></div></div><div className="clue-grid">{scenario.clues.map((clue, index) => <button type="button" className={seen.includes(index) ? 'seen' : ''} onClick={() => inspect(index)} key={clue}><span>{seen.includes(index) ? '✓' : '?'}</span>{seen.includes(index) ? clue : 'Inspect clue'}</button>)}</div>
-    {seen.length === scenario.clues.length && <><h3 className="prompt">{scenario.question}</h3><div className="choice-pills">{scenario.options.map(option => <button type="button" className={answer === option ? 'chosen' : ''} onClick={() => setAnswer(option)} key={option}>{option}</button>)}</div><button type="button" className="primary-action" disabled={!answer} onClick={solve}>Solve the problem</button></>}{feedback && <p className="feedback-note" aria-live="polite">{feedback}</p>}
-  </ChallengeFrame>
+  const solve = () => {
+    if (!answer) return
+    if (answer === scenario.answer) {
+      const recipient = phase === 'initial' ? activeTeamId : stealTeamId
+      const name = phase === 'initial' ? activeTeamName : stealTeamName
+      onComplete({
+        points: 15,
+        token: 'skill',
+        message: `Case solved! ${name} found the answer: ${scenario.explanation}`,
+        problems: 1,
+        discovered: ['Investigation', 'Problem solving'],
+        recognition: 'Careful Investigator',
+        teamId: recipient,
+      })
+    } else {
+      setEliminatedOptions(prev => [...prev, answer])
+      if (phase === 'initial') {
+        setPhase('passed')
+        onPassTurn?.(stealTeamId)
+        setAnswer(null)
+        setFeedback(`❌ Case not solved! Clues passed to ${stealTeamName}. What is your deduction?`)
+      } else {
+        setFeedback(`❌ Incorrect deduction. Neither team got the point! The answer was "${scenario.answer}".`)
+        window.setTimeout(() => {
+          onComplete({
+            points: 0,
+            token: 'skill',
+            message: `Neither team solved the case. The missing contribution was "${scenario.answer}". ${scenario.explanation}`,
+            teamId: stealTeamId,
+          })
+        }, 1500)
+      }
+    }
+  }
+
+  return (
+    <ChallengeFrame
+      label="⌕"
+      title="Work Detective"
+      instruction={
+        phase === 'passed'
+          ? `🔄 Passed to ${stealTeamName}! Review the clues and solve the community problem.`
+          : `${activeTeamName}, inspect every clue, then solve the community problem.`
+      }
+    >
+      <LifelineBar onUseLifeline={onUseLifeline} lifelinesUsed={lifelinesUsed} activeTeamScore={activeTeamScore} />
+
+      <div className="detective-title">
+        <span aria-hidden="true">🔎</span>
+        <div>
+          <p>CASE FILE {phase === 'passed' && `• PASSED TO ${stealTeamName.toUpperCase()}`}</p>
+          <h3>{scenario.title}</h3>
+        </div>
+      </div>
+      <div className="clue-grid">
+        {scenario.clues.map((clue, index) => (
+          <button type="button" className={seen.includes(index) ? 'seen' : ''} onClick={() => inspect(index)} key={clue}>
+            <span>{seen.includes(index) ? '✓' : '?'}</span>
+            {seen.includes(index) ? clue : 'Inspect clue'}
+          </button>
+        ))}
+      </div>
+      {seen.length === scenario.clues.length && (
+        <>
+          <h3 className="prompt">{scenario.question}</h3>
+          <div className="choice-pills">
+            {scenario.options.map(option => {
+              const isEliminated = eliminatedOptions.includes(option)
+              return (
+                <button
+                  type="button"
+                  key={option}
+                  disabled={isEliminated}
+                  className={`${answer === option ? 'chosen' : ''} ${isEliminated ? 'eliminated' : ''}`}
+                  onClick={() => setAnswer(option)}
+                >
+                  {option} {isEliminated && '✕'}
+                </button>
+              )
+            })}
+          </div>
+          <button type="button" className="primary-action" disabled={!answer} onClick={solve}>
+            Solve the problem
+          </button>
+        </>
+      )}
+      {feedback && <p className="feedback-note" aria-live="polite">{feedback}</p>}
+    </ChallengeFrame>
+  )
 }
 
 function ActItOutChallenge({ activeTeamName, variantSeed, onComplete }: Pick<ChallengePanelProps, 'activeTeamName' | 'variantSeed' | 'onComplete'>) {

@@ -513,6 +513,151 @@ button:focus-visible, input:focus-visible, summary:focus-visible { outline: 3px 
 .hint-row span { color: #e65100; font-weight: 700; }
 .feedback-note { margin: 12px 0 0; padding: 10px 12px; border-left: 4px solid #ff9800; border-radius: 8px; color: #5f6f77; background: #fff8e1; font-size: .8rem; line-height: 1.4; }
 
+/* Lifelines Bar */
+.lifeline-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+  padding: 8px 12px;
+  background: linear-gradient(135deg, #fff8e1, #ffecb3);
+  border: 1.5px solid #ffe082;
+  border-radius: 12px;
+  box-shadow: 0 2px 5px rgba(0,0,0,.05);
+}
+.lifeline-label {
+  font-size: .72rem;
+  font-weight: 700;
+  color: #e65100;
+  text-transform: uppercase;
+  letter-spacing: .05em;
+}
+.lifeline-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 5px 10px;
+  border-radius: 99px;
+  border: 1.5px solid #ff9800;
+  background: #fff;
+  color: #e65100;
+  font-size: .72rem;
+  font-weight: 700;
+  box-shadow: 0 2px 0 #f57c00;
+  transition: transform .15s, background .15s, opacity .15s;
+  cursor: pointer;
+}
+.lifeline-chip small {
+  color: #d84315;
+  font-weight: 600;
+  font-size: .65rem;
+}
+.lifeline-chip:hover:not(:disabled) {
+  transform: translateY(-2px);
+  background: #fff3e0;
+}
+.lifeline-chip:disabled, .lifeline-chip.used {
+  opacity: .5;
+  cursor: not-allowed;
+  border-color: #ccc;
+  box-shadow: none;
+  background: #eee;
+  color: #888;
+}
+.lifeline-chip:disabled small, .lifeline-chip.used small {
+  color: #999;
+}
+
+.lifeline-clue-card {
+  margin-bottom: 12px;
+  padding: 10px 14px;
+  border-radius: 12px;
+  background: #e1f5fe;
+  border: 2px solid #81d4fa;
+  color: #0277bd;
+  font-size: .8rem;
+  line-height: 1.4;
+  animation: clueGlow 1.5s ease-in-out infinite alternate;
+}
+@keyframes clueGlow {
+  from { box-shadow: 0 0 5px rgba(3,169,244,.3); }
+  to { box-shadow: 0 0 15px rgba(3,169,244,.7); }
+}
+
+.lifeline-toast {
+  position: fixed;
+  top: 80px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: linear-gradient(135deg, #ff9800, #f57c00);
+  color: #fff;
+  padding: 10px 22px;
+  border-radius: 99px;
+  border: 2px solid #ffe082;
+  box-shadow: 0 6px 20px rgba(0,0,0,.3);
+  font-size: .88rem;
+  font-weight: 700;
+  z-index: 1000;
+  animation: toastDrop .3s cubic-bezier(.17,.67,.12,.99);
+}
+@keyframes toastDrop {
+  from { transform: translate(-50%, -20px); opacity: 0; }
+  to { transform: translate(-50%, 0); opacity: 1; }
+}
+
+.passed-badge {
+  display: inline-block;
+  margin-bottom: 6px;
+  padding: 3px 10px;
+  border-radius: 99px;
+  background: #ff5722;
+  color: #fff;
+  font-size: .65rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  box-shadow: 0 2px 4px rgba(255,87,34,.3);
+}
+
+.answer-option.eliminated {
+  opacity: .35;
+  text-decoration: line-through;
+  filter: grayscale(1);
+  cursor: not-allowed;
+  background: #f5f5f5 !important;
+  border-color: #e0e0e0 !important;
+  transform: none !important;
+  box-shadow: none !important;
+}
+.eliminated-tag {
+  margin-left: auto;
+  color: #d32f2f;
+  font-weight: 800;
+}
+
+.choice-pills button.eliminated {
+  opacity: .35;
+  text-decoration: line-through;
+  cursor: not-allowed;
+  background: #f5f5f5;
+  border-color: #ddd;
+}
+
+.reward-numbers.zero-points b {
+  color: #757575;
+  background: #eeeeee;
+}
+.reward-numbers.zero-points span {
+  color: #d32f2f;
+  background: #ffebee;
+}
+
+.auto-next-btn {
+  position: relative;
+  overflow: hidden;
+}
+
 /* Vertical chain */
 .vertical-chain { display: grid; justify-items: center; gap: 4px; margin: 7px 0 18px; }
 .vertical-chain > span, .missing-card { min-width: 165px; padding: 8px 13px; border: 2px solid #bdbdbd; border-radius: 12px; color: #37474f; background: #fff; font-size: .83rem; font-weight: 700; text-align: center; box-shadow: 0 2px 0 #e0e0e0; }
