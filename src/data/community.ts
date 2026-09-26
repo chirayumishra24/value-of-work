@@ -9,4 +9,4 @@ export const locations: CommunityLocation[] = [
   { id: 'community', title: 'Community', icon: '🏘', shortContribution: 'connects people and services', position: 'community', color: 'purple', buildingImage: '/assets/building_community.jpg' },
 ]
 
-export const hiddenWork = ['Cleaning', 'Maintenance', 'Transport', 'Repair', 'Care', 'Organisation', 'Cooking', 'Support']
+export const hiddenWork = ['Cleaning', 'Maintenance', 'Transport', 'Repair', 'Care', 'Caregiving', 'Cooking', 'Homemaking', 'Organisation', 'Volunteering']

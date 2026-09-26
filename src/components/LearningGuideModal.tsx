@@ -72,6 +72,22 @@ const CAREERS: CareerCard[] = [
     importance: 'Cooks, cleans, raises children, and looks after elderly relatives. Unpaid yet indispensable labor.',
     quote: '"Love and care create the foundation for all outside labor."',
   },
+  {
+    title: 'Soldier',
+    role: 'National Defense & Security',
+    icon: '🛡️',
+    category: 'PEOPLE',
+    importance: 'Serves in the armed forces to protect national sovereignty, maintain peace, and assist during crises.',
+    quote: '"Courage and duty safeguard our freedom and security."',
+  },
+  {
+    title: 'Entrepreneur',
+    role: 'Enterprise & Innovation',
+    icon: '💡',
+    category: 'SKILLS',
+    importance: 'Launches new business ventures, takes risks for profit, introduces innovations, and creates employment.',
+    quote: '"Initiative and resilience turn ideas into community value."',
+  },
 ]
 
 export function LearningGuideModal({ isOpen, initialTab = 'concepts', onClose }: LearningGuideModalProps) {
@@ -149,30 +165,37 @@ export function LearningGuideModal({ isOpen, initialTab = 'concepts', onClose }:
           {activeTab === 'concepts' && (
             <div className="guide-content-tab">
               <article className="concept-card">
-                <h3>1. Interdependence: The Web of Work</h3>
+                <h3>1. Economic vs. Non-Economic Activities</h3>
                 <p>
-                  No individual or family can produce everything they need alone. When farmers grow crops, they depend on mechanics to repair tractors, weavers to make clothes, and doctors to treat illness. Every job is a link in a delicate chain.
+                  <strong>Economic activities</strong> are performed in exchange for money, wages, or profit (such as teaching, trade, soldiering, entrepreneurship, and manufacturing). <strong>Non-economic activities</strong> are done out of love, care, or duty without expecting payment (such as cooking family meals, caregiving, tutoring children at home, and community service).
                 </p>
               </article>
 
               <article className="concept-card">
-                <h3>2. Dignity of Labor</h3>
+                <h3>2. "Work is Worship" &amp; Dignity of Labour</h3>
                 <p>
-                  All forms of honest work carry equal honor. Manual labor like sanitation, farming, and construction is just as vital as white-collar office professions. A dignified society values the contribution, not just the title.
+                  In the chapter, work is compared to the spiritual act of <strong>worship</strong>. The <strong>dignity of labour</strong> teaches that all honest work — whether manual, technical, or intellectual — deserves equal respect, value, and consideration. No honest task is inferior or superior.
                 </p>
               </article>
 
               <article className="concept-card">
-                <h3>3. Invisible & Unpaid Labor</h3>
+                <h3>3. Interdependence &amp; Division of Labour</h3>
                 <p>
-                  Much of the world’s most important work happens without a paycheck — taking care of babies, cooking family meals, washing dishes, and caring for elderly grandparents. Recognizing invisible labor is key to understanding genuine community wealth.
+                  No individual can produce everything alone. Through the <strong>division of labour</strong>, different people specialize in specific tasks (farming, transport, repair, medicine, education). We all rely on each other in an interconnected web of work.
                 </p>
               </article>
 
               <article className="concept-card">
-                <h3>4. The Ripple Effect of Stoppages</h3>
+                <h3>4. Invisible &amp; Unpaid Household Labour</h3>
                 <p>
-                  When one sector halts — such as transport strikes or water main breakdowns — the entire community feels the consequence within hours. Cooperation and rapid problem solving keep communities resilient.
+                  <strong>Homemakers</strong> and caregivers provide foundational labor that sustains families and society without receiving a monetary wage. Recognizing and respecting this invisible care work is vital to appreciating the true value of work.
+                </p>
+              </article>
+
+              <article className="concept-card">
+                <h3>5. Trade, Business &amp; The Ripple Effect</h3>
+                <p>
+                  <strong>Trade</strong> and <strong>business</strong> circulate goods and services to where they are needed. When any link in this chain breaks — like transport or sanitation stopping — the ripple effect is felt across schools, clinics, and homes.
                 </p>
               </article>
             </div>

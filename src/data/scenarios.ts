@@ -29,10 +29,12 @@ export const detectiveScenarios: DetectiveScenario[] = [
 ]
 
 export const actRoles: ActRole[] = [
-  { role: 'Mechanic', contribution: 'Keeps useful vehicles and tools working safely', options: ['Keeps useful vehicles and tools working safely', 'Chooses what everyone should eat', 'Stops all services', 'Removes community connections'] },
-  { role: 'Cleaner', contribution: 'Helps shared spaces stay safe and welcoming', options: ['Helps shared spaces stay safe and welcoming', 'Hides public spaces', 'Stops everyone learning', 'Delays every service'] },
-  { role: 'Teacher', contribution: 'Helps students develop knowledge and skills', options: ['Helps students develop knowledge and skills', 'Repairs every vehicle', 'Moves all market goods', 'Closes community spaces'] },
-  { role: 'Driver', contribution: 'Connects people and supplies to the places they are needed', options: ['Connects people and supplies to the places they are needed', 'Stops goods from moving', 'Removes all tools', 'Keeps every shop closed'] },
+  { role: 'Teacher', contribution: 'Imparts knowledge, skills, and mentors students', options: ['Imparts knowledge, skills, and mentors students', 'Repairs heavy road vehicles', 'Trades commodities on the stock exchange', 'Operates farm harvest machinery'] },
+  { role: 'Soldier', contribution: 'Serves in the armed forces to defend national peace and security', options: ['Serves in the armed forces to defend national peace and security', 'Sells groceries in the local market', 'Cooks family meals at home', 'Writes software in an office'] },
+  { role: 'Homemaker', contribution: 'Manages household work and provides foundational care for family', options: ['Manages household work and provides foundational care for family', 'Navigates international cargo ships', 'Builds commercial skyscrapers', 'Conducts traffic surveys'] },
+  { role: 'Entrepreneur', contribution: 'Starts and runs a business, taking risks to create value and jobs', options: ['Starts and runs a business, taking risks to create value and jobs', 'Avoids all responsibility', 'Waits for instructions without initiating', 'Stops all economic trade'] },
+  { role: 'Caregiver', contribution: 'Provides support, care, and comfort for elderly or ill individuals', options: ['Provides support, care, and comfort for elderly or ill individuals', 'Repairs electrical power grids', 'Issues parking fines', 'Operates heavy drilling machines'] },
+  { role: 'Sanitation Worker', contribution: 'Maintains public cleanliness and safeguards community health', options: ['Maintains public cleanliness and safeguards community health', 'Directs television commercials', 'Composes musical scores', 'Audits corporate accounts'] },
 ]
 
 export const crisisScenarios: CrisisScenario[] = [

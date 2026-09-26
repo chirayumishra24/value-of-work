@@ -1,7 +1,7 @@
 import type { ChallengeType, RoundDefinition, SessionLength } from '../game/types'
 
 export const rounds: RoundDefinition[] = [
-  { type: 'quiz', title: 'Quick Quiz', kicker: 'Identify a contribution', time: 20, icon: '✦', questionCategory: 'connections', takeaway: 'A contribution often helps another person take the next step.', discussion: 'Which job in this question depended on another contribution?' },
+  { type: 'quiz', title: 'Quick Quiz', kicker: 'Value of Work Concepts', time: 25, icon: '✦', takeaway: 'Understanding economic, non-economic, and community work helps us value every honest contribution.', discussion: 'Why is it important to give equal dignity and respect to all forms of work?' },
   { type: 'connect', title: 'Connect the Work', kicker: 'Find the missing link', time: 30, icon: '↗', takeaway: 'Work chains include people and services that can be easy to overlook.', discussion: 'Where else might this missing contribution be needed?' },
   { type: 'chain', title: 'Build the Work Chain', kicker: 'Arrange a real connection', time: 35, icon: '⛓', takeaway: 'A useful item often reaches people through several connected contributions.', discussion: 'What could happen if one card disappeared from this chain?' },
   { type: 'whatIf', title: 'What Happens If?', kicker: 'Predict the ripple', time: 50, icon: '◌', takeaway: 'When one contribution stops, downstream services may be affected.', discussion: 'Which community member would notice this change first?' },
